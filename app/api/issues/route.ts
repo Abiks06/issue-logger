@@ -8,7 +8,14 @@ const createIssueSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  let body;
+
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
   const validation = createIssueSchema.safeParse(body);
   if (!validation.success) {
     const flattenedError = z.flattenError(validation.error);
@@ -16,12 +23,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(fieldErrors, { status: 400 });
   }
 
-  const newIssue = await prisma.issue.create({
-    data: {
-      title: body.title,
-      description: body.description,
-    },
-  });
+  try {
+    const newIssue = await prisma.issue.create({
+      data: {
+        title: body.title,
+        description: body.description,
+      },
+    });
 
-  return NextResponse.json(newIssue, { status: 201 });
+    return NextResponse.json(newIssue, { status: 201 });
+  } catch (error) {
+    console.error("Failed to create issue", error);
+    return NextResponse.json(
+      { error: "Unable to create issue. Please verify the database is configured and reachable." },
+      { status: 500 },
+    );
+  }
 }
