@@ -1,18 +1,14 @@
 import "@radix-ui/themes/styles.css";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Maven_Pro } from "next/font/google";
 import "./globals.css";
 import NavBar from "./NavBar";
 
 import { Theme } from "@radix-ui/themes";
+import { ThemeProvider } from "next-themes";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const mavenPro = Maven_Pro({
+  variable: "--font-maven-pro",
   subsets: ["latin"],
 });
 
@@ -27,15 +23,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
-        <Theme>
-          <NavBar />
-          <main className="p-6">{children}</main>
-        </Theme>
+        <ThemeProvider attribute="class">
+          <Theme
+            appearance="inherit"
+            accentColor="tomato"
+            grayColor="mauve"
+            radius="large"
+          >
+            <NavBar />
+            <main className={`p-6 ${mavenPro.className}`}>{children}</main>
+          </Theme>
+        </ThemeProvider>
       </body>
     </html>
   );

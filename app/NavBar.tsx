@@ -6,6 +6,12 @@ import { MdOutlineDashboard } from "react-icons/md";
 import { FaTools } from "react-icons/fa";
 import { usePathname } from "next/navigation";
 import classNames from "classnames";
+import { Anybody } from "next/font/google";
+
+const anybody = Anybody({
+  subsets: ["latin"],
+  variable: "--font-anybody",
+});
 
 const NavBar = () => {
   const links = [
@@ -15,7 +21,9 @@ const NavBar = () => {
   const currentPathname = usePathname();
 
   return (
-    <nav className="flex items-center justify-between bg-gray-700 border-b-2 border-black p-5">
+    <nav
+      className={`flex items-center justify-between bg-gray-700 border-b-2 border-black p-5 ${anybody.className}`}
+    >
       <div className="flex items-center p-5 text-gray-300">
         <Link href="/">
           <FaTools />
@@ -26,7 +34,8 @@ const NavBar = () => {
           const isActive =
             link.href === "/"
               ? currentPathname === "/"
-              : currentPathname === link.href || currentPathname.startsWith(`${link.href}/`);
+              : currentPathname === link.href ||
+                currentPathname.startsWith(`${link.href}/`);
 
           return (
             <li key={link.href} className="flex items-center p-5">
