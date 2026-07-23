@@ -3,8 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 
 const createIssueSchema = z.object({
-  title: z.string().min(1).max(255),
-  description: z.string().min(1),
+  title: z.string().min(1, 'Title is required').max(255),
+  description: z.string().min(1, 'Description is required'),
 });
 
 export async function POST(request: NextRequest) {
@@ -35,7 +35,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Failed to create issue", error);
     return NextResponse.json(
-      { error: "Unable to create issue. Please verify the database is configured and reachable." },
+      {
+        error: "Unable to create issue.",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 },
     );
   }
