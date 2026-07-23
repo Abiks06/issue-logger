@@ -1,12 +1,16 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { TextField, Button, Callout } from "@radix-ui/themes";
+import { TextField, Button, Callout, Text } from "@radix-ui/themes";
 import "easymde/dist/easymde.min.css";
 import { useForm, Controller } from "react-hook-form";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { createIssueSchema } from "@/app/validationSchemas";
+import { z } from "zod";
+import ErrorMessage from "@/app/components/ErrorMessage";
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), {
   ssr: false,
@@ -15,33 +19,37 @@ const SimpleMDE = dynamic(() => import("react-simplemde-editor"), {
   ),
 });
 
-interface IssueForm {
-  title: string;
-  description: string;
-}
+type issueForm = z.infer<typeof createIssueSchema>;
 
 const NewIssuesPage = () => {
-  const { register, control, handleSubmit } = useForm<IssueForm>();
+  const {
+    register,
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<issueForm>({
+    resolver: zodResolver(createIssueSchema),
+  });
   const router = useRouter();
   const [error, seterror] = useState("");
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-2xl flex flex-col items-center ">
+    <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8 dark:bg-slate-950 ">
+      <div className="mx-auto flex w-full max-w-2xl flex-col rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_18px_45px_-20px_rgba(15,23,42,0.45)] sm:p-8 dark:border-slate-800 dark:bg-slate-900 dark:shadow-[0_24px_60px_-24px_rgba(0,0,0,0.85)]">
         {error && (
           <Callout.Root
             variant="surface"
             size="2"
             color="red"
             highContrast
-            style={{ width: "100%", maxWidth: "720px" }}
-            className="mb-5"
+            className="mb-5 w-full"
           >
             <Callout.Text className="text-center">{error}</Callout.Text>
           </Callout.Root>
         )}
+
         <form
-          className="w-full flex flex-col items-center space-y-1.5"
+          className="flex w-full flex-col gap-4"
           onSubmit={handleSubmit(async (data) => {
             try {
               await axios.post("/api/issues", data);
@@ -51,33 +59,41 @@ const NewIssuesPage = () => {
             }
           })}
         >
-          <TextField.Root
-            placeholder="Title..."
-            radius="large"
-            size="3"
-            variant="surface"
-            style={{ width: "100%", maxWidth: "720px" }}
-            {...register("title")}
-          />
-          <div className="w-full max-w-180">
-            <Controller
-              name="description"
-              control={control}
-              render={({ field: { ref, value, ...rest } }) => (
-                <SimpleMDE
-                  placeholder="Issue description..."
-                  value={value || ""}
-                  {...rest}
-                />
-              )}
+          <div className="flex flex-col gap-2">
+            <TextField.Root
+              placeholder="Title..."
+              radius="large"
+              size="3"
+              variant="surface"
+              className="w-full"
+              {...register("title")}
             />
+            <ErrorMessage>{errors.title?.message}</ErrorMessage>
           </div>
+
+          <div className="flex flex-col gap-2">
+            <div className="w-full">
+              <Controller
+                name="description"
+                control={control}
+                render={({ field: { ref, value, ...rest } }) => (
+                  <SimpleMDE
+                    placeholder="Issue description..."
+                    value={value || ""}
+                    {...rest}
+                  />
+                )}
+              />
+            </div>
+            <ErrorMessage>{errors.description?.message}</ErrorMessage>
+          </div>
+
           <Button
             size="3"
             variant="surface"
             color="cyan"
-            style={{ width: "fit-content" }}
             highContrast
+            className="mt-2 w-fit"
           >
             Create Issue
           </Button>

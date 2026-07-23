@@ -24,8 +24,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-full flex flex-col">
-        <ThemeProvider attribute="class">
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <Theme
             appearance="inherit"
             accentColor="tomato"
@@ -33,7 +33,7 @@ export default function RootLayout({
             radius="large"
           >
             <NavBar />
-            <main className={`p-6 ${mavenPro.className}`}>{children}</main>
+            <main className={`flex-1 p-6 ${mavenPro.className}`}>{children}</main>
           </Theme>
         </ThemeProvider>
       </body>
