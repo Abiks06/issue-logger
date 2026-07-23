@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { TextField, Button, Callout, Text } from "@radix-ui/themes";
+import { TextField, Button, Callout, Spinner } from "@radix-ui/themes";
 import "easymde/dist/easymde.min.css";
 import { useForm, Controller } from "react-hook-form";
 import axios from "axios";
@@ -32,6 +32,7 @@ const NewIssuesPage = () => {
   });
   const router = useRouter();
   const [error, seterror] = useState("");
+  const [isSubmitting, setSubmitting] = useState(false);
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8 dark:bg-slate-950 ">
@@ -52,9 +53,11 @@ const NewIssuesPage = () => {
           className="flex w-full flex-col gap-4"
           onSubmit={handleSubmit(async (data) => {
             try {
+              setSubmitting(true);
               await axios.post("/api/issues", data);
               router.push("/issues");
             } catch (error) {
+              setSubmitting(false); 
               seterror("An unexpected error occured");
             }
           })}
@@ -93,9 +96,10 @@ const NewIssuesPage = () => {
             variant="surface"
             color="cyan"
             highContrast
+            disabled = {isSubmitting}
             className="mt-2 w-fit"
           >
-            Create Issue
+            Create Issue {isSubmitting && <Spinner />}
           </Button>
         </form>
       </div>
