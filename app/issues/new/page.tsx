@@ -4,12 +4,12 @@ import dynamic from "next/dynamic";
 import { TextField, Button, Callout, Spinner } from "@radix-ui/themes";
 import "easymde/dist/easymde.min.css";
 import { useForm, Controller } from "react-hook-form";
-import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createIssueSchema } from "@/app/validationSchemas";
 import { z } from "zod";
+import { createIssue } from "@/app/actions/issue";
 import ErrorMessage from "@/app/components/ErrorMessage";
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), {
@@ -54,10 +54,16 @@ const NewIssuesPage = () => {
           onSubmit={handleSubmit(async (data) => {
             try {
               setSubmitting(true);
-              await axios.post("/api/issues", data);
+              const result = await createIssue(data);
+
+              if (!result.success) {
+                seterror(result.error || "Failed to create issue. ");
+                setSubmitting(false);
+                return;
+              }
               router.push("/issues");
             } catch (error) {
-              setSubmitting(false); 
+              setSubmitting(false);
               seterror("An unexpected error occured");
             }
           })}
@@ -96,7 +102,7 @@ const NewIssuesPage = () => {
             variant="surface"
             color="cyan"
             highContrast
-            disabled = {isSubmitting}
+            disabled={isSubmitting}
             className="mt-2 w-fit"
           >
             Create Issue {isSubmitting && <Spinner />}
