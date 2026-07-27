@@ -5,7 +5,7 @@ import { TextField, Button, Callout, Spinner } from "@radix-ui/themes";
 import "easymde/dist/easymde.min.css";
 import { useForm, Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createIssueSchema } from "@/app/validationSchemas";
 import { z } from "zod";
@@ -31,8 +31,8 @@ const NewIssuesPage = () => {
     resolver: zodResolver(createIssueSchema),
   });
   const router = useRouter();
-  const [error, seterror] = useState("");
-  const [isSubmitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [isPending, startTransition] = useTransition();
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8 dark:bg-slate-950 ">
@@ -51,21 +51,26 @@ const NewIssuesPage = () => {
 
         <form
           className="flex w-full flex-col gap-4"
-          onSubmit={handleSubmit(async (data) => {
-            try {
-              setSubmitting(true);
-              const result = await createIssue(data);
+          onSubmit={handleSubmit((data) => {
+            startTransition(async () => {
+              setError("");
 
-              if (!result.success) {
-                seterror(result.error || "Failed to create issue. ");
-                setSubmitting(false);
-                return;
+              try {
+                const result = await createIssue(data);
+
+                if (!result.success) {
+                  const message = result.errors
+                    ? Object.values(result.errors).flat().join(" ")
+                    : result.error || "Failed to create issue.";
+                  setError(message);
+                  return;
+                }
+
+                router.push("/issues");
+              } catch {
+                setError("An unexpected error occurred.");
               }
-              router.push("/issues");
-            } catch (error) {
-              setSubmitting(false);
-              seterror("An unexpected error occured");
-            }
+            });
           })}
         >
           <div className="flex flex-col gap-2">
@@ -102,10 +107,16 @@ const NewIssuesPage = () => {
             variant="surface"
             color="cyan"
             highContrast
-            disabled={isSubmitting}
+            disabled={isPending}
             className="mt-2 w-fit"
           >
-            Create Issue {isSubmitting && <Spinner />}
+            {isPending ? (
+              <span className="flex items-center gap-2">
+                <Spinner size="2" /> Creating...
+              </span>
+            ) : (
+              "Create Issue"
+            )}
           </Button>
         </form>
       </div>

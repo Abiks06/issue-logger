@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Button, TextField } from "@radix-ui/themes";
+import { Button } from "@radix-ui/themes";
 import { prisma } from "@/lib/db";
+import IssueSearch from "@/app/components/IssueSearch";
 
 export default async function IssuesPage() {
   const issues = await prisma.issue.findMany({
@@ -33,36 +34,8 @@ export default async function IssuesPage() {
           </Button>
         </div>
 
-        <div className="w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-5">
-          <TextField.Root
-            placeholder="Search issues..."
-            size="3"
-            variant="surface"
-            className="w-full"
-          >
-            <TextField.Slot>
-              <span aria-hidden="true">🔍</span>
-            </TextField.Slot>
-          </TextField.Root>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          {issues.map((issue) => (
-            <div
-              key={issue.id}
-              className="rounded-2xl border border-slate-200 bg-white p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
-            >
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                {issue.title}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-                {issue.description}
-              </p>
-            </div>
-          ))}
-        </div>
+        <IssueSearch initialIssues={issues} />
       </div>
     </div>
   );
 }
-

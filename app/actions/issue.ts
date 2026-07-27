@@ -36,3 +36,21 @@ export async function createIssue(data: IssueFormData) {
     };
   }
 }
+
+export async function updateIssueStatus(
+  id: number,
+  status: "IN_PROGRESS" | "CLOSED" = "IN_PROGRESS"
+) {
+  await prisma.issue.update({
+    where: { id },
+    data: { status },
+  });
+  revalidatePath("/issues");
+}
+
+export async function deleteIssue(id: number) {
+  await prisma.issue.delete({
+    where: { id },
+  });
+  revalidatePath("/issues");
+}
