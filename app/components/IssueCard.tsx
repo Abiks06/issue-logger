@@ -117,7 +117,7 @@ function IssueCard({ issue }: IssueCardProps) {
       </div>
 
       {/* Description */}
-      <div className="mt-3 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/60">
+      <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-4 dark:border-slate-800/50 dark:bg-slate-800/30">
         <div className="prose prose-slate max-w-none text-sm leading-6 text-slate-700 dark:prose-invert dark:text-slate-300">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayDescription}</ReactMarkdown>
         </div>

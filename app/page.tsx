@@ -348,7 +348,7 @@ export default async function HomePage() {
                 <Link
                   href="/issues/new"
                   id="quick-create-issue"
-                  className="group flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-all hover:border-cyan-400 hover:bg-cyan-50/50 hover:shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:hover:border-cyan-600 dark:hover:bg-cyan-950/20"
+                  className="group flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 transition-all hover:border-cyan-300 hover:bg-cyan-50/40 hover:shadow-sm dark:border-slate-800/60 dark:bg-slate-800/40 dark:hover:border-cyan-600 dark:hover:bg-cyan-950/30"
                 >
                   <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-100 text-cyan-600 group-hover:bg-cyan-200 dark:bg-cyan-950 dark:text-cyan-400 dark:group-hover:bg-cyan-900">
                     ✏️
@@ -363,7 +363,7 @@ export default async function HomePage() {
                 <Link
                   href="/issues"
                   id="quick-review-issues"
-                  className="group flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-all hover:border-violet-400 hover:bg-violet-50/50 hover:shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:hover:border-violet-600 dark:hover:bg-violet-950/20"
+                  className="group flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 transition-all hover:border-violet-300 hover:bg-violet-50/40 hover:shadow-sm dark:border-slate-800/60 dark:bg-slate-800/40 dark:hover:border-violet-600 dark:hover:bg-violet-950/30"
                 >
                   <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-600 group-hover:bg-violet-200 dark:bg-violet-950 dark:text-violet-400 dark:group-hover:bg-violet-900">
                     📋
