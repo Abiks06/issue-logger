@@ -1,13 +1,72 @@
 @import "tailwindcss";
 
+/* ─── Colour tokens ───────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+
+  /* Status colours */
+  --status-open-bg: #fff1f2;
+  --status-open-text: #be123c;
+  --status-open-border: #fecdd3;
+
+  --status-progress-bg: #fffbeb;
+  --status-progress-text: #b45309;
+  --status-progress-border: #fde68a;
+
+  --status-closed-bg: #f0fdf4;
+  --status-closed-text: #15803d;
+  --status-closed-border: #bbf7d0;
+
+  /* Priority colours */
+  --priority-low-bg: #f0f9ff;
+  --priority-low-text: #0369a1;
+  --priority-low-border: #bae6fd;
+
+  --priority-medium-bg: #fefce8;
+  --priority-medium-text: #a16207;
+  --priority-medium-border: #fef08a;
+
+  --priority-high-bg: #fff7ed;
+  --priority-high-text: #c2410c;
+  --priority-high-border: #fed7aa;
+
+  --priority-critical-bg: #fff1f2;
+  --priority-critical-text: #9f1239;
+  --priority-critical-border: #fecdd3;
 }
 
 .dark {
   --background: #0a0a0a;
-  --foreground: #ededed;
+  --foreground: #f1f5f9;
+
+  --status-open-bg: rgba(190,18,60,0.12);
+  --status-open-text: #fda4af;
+  --status-open-border: rgba(190,18,60,0.3);
+
+  --status-progress-bg: rgba(180,83,9,0.12);
+  --status-progress-text: #fcd34d;
+  --status-progress-border: rgba(180,83,9,0.3);
+
+  --status-closed-bg: rgba(21,128,61,0.12);
+  --status-closed-text: #86efac;
+  --status-closed-border: rgba(21,128,61,0.3);
+
+  --priority-low-bg: rgba(3,105,161,0.12);
+  --priority-low-text: #7dd3fc;
+  --priority-low-border: rgba(3,105,161,0.3);
+
+  --priority-medium-bg: rgba(161,98,7,0.12);
+  --priority-medium-text: #fde047;
+  --priority-medium-border: rgba(161,98,7,0.3);
+
+  --priority-high-bg: rgba(194,65,12,0.12);
+  --priority-high-text: #fdba74;
+  --priority-high-border: rgba(194,65,12,0.3);
+
+  --priority-critical-bg: rgba(159,18,57,0.12);
+  --priority-critical-text: #fda4af;
+  --priority-critical-border: rgba(159,18,57,0.3);
 }
 
 html {
@@ -17,10 +76,49 @@ html {
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+/* ─── Status badge utility classes ───────────────────────────── */
+.status-badge-open {
+  background-color: var(--status-open-bg);
+  color: var(--status-open-text);
+  border-color: var(--status-open-border);
+}
+.status-badge-progress {
+  background-color: var(--status-progress-bg);
+  color: var(--status-progress-text);
+  border-color: var(--status-progress-border);
+}
+.status-badge-closed {
+  background-color: var(--status-closed-bg);
+  color: var(--status-closed-text);
+  border-color: var(--status-closed-border);
+}
+
+/* ─── Priority badge utility classes ─────────────────────────── */
+.priority-badge-low {
+  background-color: var(--priority-low-bg);
+  color: var(--priority-low-text);
+  border-color: var(--priority-low-border);
+}
+.priority-badge-medium {
+  background-color: var(--priority-medium-bg);
+  color: var(--priority-medium-text);
+  border-color: var(--priority-medium-border);
+}
+.priority-badge-high {
+  background-color: var(--priority-high-bg);
+  color: var(--priority-high-text);
+  border-color: var(--priority-high-border);
+}
+.priority-badge-critical {
+  background-color: var(--priority-critical-bg);
+  color: var(--priority-critical-text);
+  border-color: var(--priority-critical-border);
+}
+
+/* ─── Prose styles ────────────────────────────────────────────── */
 .prose h1,
 .prose h2,
 .prose h3,
@@ -50,4 +148,21 @@ body {
 
 .dark .prose code {
   background-color: rgba(148, 163, 184, 0.2);
+}
+
+/* ─── Dashboard glow utility ─────────────────────────────────── */
+.hero-glow {
+  background: radial-gradient(
+    ellipse 80% 50% at 50% -10%,
+    rgba(6, 182, 212, 0.15),
+    transparent
+  );
+}
+
+.dark .hero-glow {
+  background: radial-gradient(
+    ellipse 80% 50% at 50% -10%,
+    rgba(6, 182, 212, 0.08),
+    transparent
+  );
 }

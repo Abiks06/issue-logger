@@ -3,9 +3,11 @@ import type { Metadata } from "next";
 import { Maven_Pro } from "next/font/google";
 import "./globals.css";
 import NavBar from "./NavBar";
+import { Toaster } from "react-hot-toast";
 
 import { Theme } from "@radix-ui/themes";
 import { ThemeProvider } from "next-themes";
+import { prisma } from "@/lib/db";
 
 const mavenPro = Maven_Pro({
   variable: "--font-maven-pro",
@@ -13,27 +15,42 @@ const mavenPro = Maven_Pro({
 });
 
 export const metadata: Metadata = {
-  title: "Issue Logger",
-  description: "Track, manage, and resolve issues efficiently.",
+  title: {
+    default: "Issue Logger",
+    template: "%s | Issue Logger",
+  },
+  description: "Track, manage, and resolve issues efficiently with Issue Logger.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const openIssueCount = await prisma.issue.count({ where: { status: "OPEN" } });
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className={`min-h-full flex flex-col bg-background text-foreground ${mavenPro.className}`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <Theme
             appearance="inherit"
-            accentColor="tomato"
-            grayColor="mauve"
+            accentColor="cyan"
+            grayColor="slate"
             radius="large"
           >
-            <NavBar />
-            <main className={`flex-1 p-6 ${mavenPro.className}`}>{children}</main>
+            <NavBar openIssueCount={openIssueCount} />
+            <main className="flex-1">{children}</main>
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                className: "font-medium text-sm",
+                style: {
+                  borderRadius: "0.75rem",
+                  border: "1px solid rgba(148,163,184,0.2)",
+                },
+              }}
+            />
           </Theme>
         </ThemeProvider>
       </body>
