@@ -4,10 +4,11 @@ import { Maven_Pro } from "next/font/google";
 import "./globals.css";
 import NavBar from "./NavBar";
 import { Toaster } from "react-hot-toast";
-
 import { Theme } from "@radix-ui/themes";
 import { ThemeProvider } from "next-themes";
+import { SessionProvider } from "next-auth/react";
 import { prisma } from "@/lib/db";
+import { auth } from "@/auth";
 
 const mavenPro = Maven_Pro({
   variable: "--font-maven-pro",
@@ -27,32 +28,39 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const openIssueCount = await prisma.issue.count({ where: { status: "OPEN" } });
+  const session = await auth();
+  const userId = session?.user?.id ? parseInt(session.user.id, 10) : undefined;
+
+  const openIssueCount = userId
+    ? await prisma.issue.count({ where: { status: "OPEN", userId } })
+    : 0;
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`min-h-full flex flex-col bg-background text-foreground ${mavenPro.className}`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <Theme
-            appearance="inherit"
-            accentColor="cyan"
-            grayColor="slate"
-            radius="large"
-          >
-            <NavBar openIssueCount={openIssueCount} />
-            <main className="flex-1">{children}</main>
-            <Toaster
-              position="bottom-right"
-              toastOptions={{
-                className: "font-medium text-sm",
-                style: {
-                  borderRadius: "0.75rem",
-                  border: "1px solid rgba(148,163,184,0.2)",
-                },
-              }}
-            />
-          </Theme>
-        </ThemeProvider>
+        <SessionProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            <Theme
+              appearance="inherit"
+              accentColor="cyan"
+              grayColor="slate"
+              radius="large"
+            >
+              <NavBar openIssueCount={openIssueCount} />
+              <main className="flex-1">{children}</main>
+              <Toaster
+                position="bottom-right"
+                toastOptions={{
+                  className: "font-medium text-sm",
+                  style: {
+                    borderRadius: "0.75rem",
+                    border: "1px solid rgba(148,163,184,0.2)",
+                  },
+                }}
+              />
+            </Theme>
+          </ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   );

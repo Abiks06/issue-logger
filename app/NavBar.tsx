@@ -5,9 +5,11 @@ import { IoMdBug } from "react-icons/io";
 import { MdOutlineDashboard } from "react-icons/md";
 import { FaBug } from "react-icons/fa";
 import { HiSun, HiMoon } from "react-icons/hi2";
+import { HiOutlineLogout } from "react-icons/hi";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { useSession, signOut } from "next-auth/react";
 import classNames from "classnames";
 
 interface NavBarProps {
@@ -23,6 +25,7 @@ const NavBar = ({ openIssueCount = 0 }: NavBarProps) => {
   const currentPathname = usePathname();
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const { data: session } = useSession();
 
   useEffect(() => {
     setMounted(true);
@@ -32,8 +35,12 @@ const NavBar = ({ openIssueCount = 0 }: NavBarProps) => {
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
   };
 
+  const initials = session?.user?.name
+    ? session.user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+    : "?";
+
   return (
-    <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200 bg-white/80 px-5 py-3 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
+    <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200/70 bg-white/80 px-5 py-3 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
       {/* Logo */}
       <Link
         href="/"
@@ -85,22 +92,46 @@ const NavBar = ({ openIssueCount = 0 }: NavBarProps) => {
         })}
       </ul>
 
-      {/* Theme toggle */}
-      <button
-        onClick={toggleTheme}
-        aria-label="Toggle colour theme"
-        className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
-      >
-        {mounted ? (
-          resolvedTheme === "dark" ? (
-            <HiSun className="text-lg" />
+      {/* Right controls */}
+      <div className="flex items-center gap-2">
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          aria-label="Toggle colour theme"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+        >
+          {mounted ? (
+            resolvedTheme === "dark" ? (
+              <HiSun className="text-lg" />
+            ) : (
+              <HiMoon className="text-lg" />
+            )
           ) : (
-            <HiMoon className="text-lg" />
-          )
-        ) : (
-          <span className="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-700" />
+            <span className="h-5 w-5 rounded-full bg-slate-200 dark:bg-slate-700" />
+          )}
+        </button>
+
+        {/* User avatar + sign out */}
+        {session?.user && (
+          <div className="flex items-center gap-2 border-l border-slate-200 pl-2 dark:border-slate-700">
+            <div className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-xs font-bold text-white shadow-sm">
+                {initials}
+              </span>
+              <span className="hidden text-xs font-medium text-slate-700 dark:text-slate-300 sm:block max-w-[100px] truncate">
+                {session.user.name}
+              </span>
+            </div>
+            <button
+              onClick={() => signOut({ callbackUrl: "/auth/login" })}
+              title="Sign out"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
+            >
+              <HiOutlineLogout className="text-base" />
+            </button>
+          </div>
         )}
-      </button>
+      </div>
     </nav>
   );
 };

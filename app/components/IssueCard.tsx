@@ -95,14 +95,14 @@ function IssueCard({ issue }: IssueCardProps) {
   };
 
   return (
-    <div className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+    <div className="group rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_8px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-2">
           <button
             onClick={copyIssueId}
             title="Click to copy issue reference"
-            className="rounded-md border border-slate-200 bg-slate-100 px-2 py-0.5 text-xs font-mono font-medium text-slate-600 transition-colors hover:border-cyan-400 hover:bg-cyan-50 hover:text-cyan-700 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-cyan-500 dark:hover:bg-cyan-950/30 dark:hover:text-cyan-400"
+            className="rounded-md border border-slate-100 bg-slate-50 px-2 py-0.5 text-xs font-mono font-medium text-slate-500 transition-colors hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-600 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:border-cyan-500 dark:hover:bg-cyan-950/30 dark:hover:text-cyan-400"
           >
             #{issue.id}
           </button>

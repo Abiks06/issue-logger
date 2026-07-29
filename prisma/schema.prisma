@@ -24,6 +24,15 @@ enum Priority {
   CRITICAL
 }
 
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  issues       Issue[]
+}
+
 model Issue {
   id          Int      @id @default(autoincrement())
   title       String   @db.VarChar(255)
@@ -32,4 +41,6 @@ model Issue {
   priority    Priority @default(MEDIUM)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  userId      Int?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }

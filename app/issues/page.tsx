@@ -2,11 +2,16 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import IssueSearch from "@/app/components/IssueSearch";
 import type { Metadata } from "next";
+import { auth } from "@/auth";
 
 export const metadata: Metadata = { title: "Issues" };
 
 export default async function IssuesPage() {
+  const session = await auth();
+  const userId = session?.user?.id ? parseInt(session.user.id, 10) : -1;
+
   const issues = await prisma.issue.findMany({
+    where: { userId },
     orderBy: { createdAt: "desc" },
   });
 

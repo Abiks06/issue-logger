@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
+import { auth } from "@/auth";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -134,13 +135,20 @@ function DonutChart({
 // ─── Page ─────────────────────────────────────────────────────────────────
 
 export default async function HomePage() {
+  const session = await auth();
+  const userId = session?.user?.id ? parseInt(session.user.id, 10) : -1;
+
   const [issues, totalIssues, openIssues, inProgressIssues, closedIssues] =
     await Promise.all([
-      prisma.issue.findMany({ orderBy: { createdAt: "desc" }, take: 6 }),
-      prisma.issue.count(),
-      prisma.issue.count({ where: { status: "OPEN" } }),
-      prisma.issue.count({ where: { status: "IN_PROGRESS" } }),
-      prisma.issue.count({ where: { status: "CLOSED" } }),
+      prisma.issue.findMany({
+        where: { userId },
+        orderBy: { createdAt: "desc" },
+        take: 6,
+      }),
+      prisma.issue.count({ where: { userId } }),
+      prisma.issue.count({ where: { status: "OPEN", userId } }),
+      prisma.issue.count({ where: { status: "IN_PROGRESS", userId } }),
+      prisma.issue.count({ where: { status: "CLOSED", userId } }),
     ]);
 
   const stats = [
@@ -149,7 +157,7 @@ export default async function HomePage() {
       value: totalIssues,
       icon: "📋",
       accent: "from-slate-400 to-slate-600",
-      bg: "bg-slate-50 dark:bg-slate-800/50",
+      bg: "bg-white dark:bg-slate-900",
       percent: 100,
       barColor: "bg-slate-400",
     },
@@ -158,7 +166,7 @@ export default async function HomePage() {
       value: openIssues,
       icon: "🔴",
       accent: "from-rose-400 to-rose-600",
-      bg: "bg-rose-50/60 dark:bg-rose-950/20",
+      bg: "bg-white dark:bg-slate-900",
       percent: totalIssues ? Math.round((openIssues / totalIssues) * 100) : 0,
       barColor: "bg-rose-500",
     },
@@ -167,7 +175,7 @@ export default async function HomePage() {
       value: inProgressIssues,
       icon: "🟡",
       accent: "from-amber-400 to-amber-600",
-      bg: "bg-amber-50/60 dark:bg-amber-950/20",
+      bg: "bg-white dark:bg-slate-900",
       percent: totalIssues ? Math.round((inProgressIssues / totalIssues) * 100) : 0,
       barColor: "bg-amber-500",
     },
@@ -176,7 +184,7 @@ export default async function HomePage() {
       value: closedIssues,
       icon: "✅",
       accent: "from-emerald-400 to-emerald-600",
-      bg: "bg-emerald-50/60 dark:bg-emerald-950/20",
+      bg: "bg-white dark:bg-slate-900",
       percent: totalIssues ? Math.round((closedIssues / totalIssues) * 100) : 0,
       barColor: "bg-emerald-500",
     },
@@ -187,7 +195,7 @@ export default async function HomePage() {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
 
         {/* ── Hero banner ────────────────────────────────────────── */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-8 shadow-[0_20px_60px_-20px_rgba(15,23,42,0.25)] dark:border-slate-800 dark:bg-slate-900 sm:p-10">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-8 shadow-[0_12px_40px_-20px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900 sm:p-10">
           <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-gradient-to-br from-cyan-400/20 to-blue-600/10 blur-3xl dark:from-cyan-500/10 dark:to-blue-700/5" />
           <div className="pointer-events-none absolute -bottom-12 -left-12 h-48 w-48 rounded-full bg-gradient-to-tr from-violet-400/10 to-fuchsia-600/5 blur-3xl" />
 
@@ -219,7 +227,7 @@ export default async function HomePage() {
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className={`${stat.bg} rounded-2xl border border-slate-200 p-5 shadow-sm transition-transform hover:-translate-y-0.5 dark:border-slate-800`}
+              className={`${stat.bg} rounded-2xl border border-slate-200/80 p-5 shadow-[0_2px_8px_rgba(15,23,42,0.04)] transition-transform hover:-translate-y-0.5 dark:border-slate-800 dark:shadow-none`}
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
