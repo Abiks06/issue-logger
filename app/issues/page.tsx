@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import IssueSearch from "@/app/components/IssueSearch";
 import type { Metadata } from "next";
+import type { Issue } from "@prisma/client";
 import { auth } from "@/auth";
 
 export const metadata: Metadata = { title: "Issues" };
@@ -10,16 +11,22 @@ export default async function IssuesPage() {
   const session = await auth();
   const userId = session?.user?.id ? parseInt(session.user.id, 10) : -1;
 
-  const issues = await prisma.issue.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-  });
+  let issues: Issue[] = [];
+
+  try {
+    issues = await prisma.issue.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
+  } catch (err) {
+    console.error("Issues page data fetch failed:", err);
+  }
 
   return (
     <div className="min-h-screen px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         {/* Page header */}
-        <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_18px_45px_-20px_rgba(15,23,42,0.2)] dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+        <div className="card-shadow-lg flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between sm:p-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-600 dark:text-cyan-400">
               Activity Board

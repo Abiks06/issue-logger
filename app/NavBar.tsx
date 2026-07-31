@@ -40,14 +40,14 @@ const NavBar = ({ openIssueCount = 0 }: NavBarProps) => {
     : "?";
 
   return (
-    <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200/70 bg-white/80 px-5 py-3 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
+    <nav className="sticky top-0 z-50 flex items-center justify-between border-b border-slate-200/70 bg-white/75 px-5 py-3 shadow-[0_1px_0_rgba(15,23,42,0.03),0_4px_16px_-8px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/80 dark:shadow-none">
       {/* Logo */}
       <Link
         href="/"
         className="flex items-center gap-2 font-bold text-slate-800 transition-opacity hover:opacity-80 dark:text-slate-100"
         aria-label="Issue Logger home"
       >
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-sm">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-cyan-500 to-blue-600 text-white shadow-sm">
           <FaBug className="text-sm" />
         </span>
         <span className="text-sm font-semibold tracking-tight">Issue Logger</span>
@@ -115,7 +115,7 @@ const NavBar = ({ openIssueCount = 0 }: NavBarProps) => {
         {session?.user && (
           <div className="flex items-center gap-2 border-l border-slate-200 pl-2 dark:border-slate-700">
             <div className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 text-xs font-bold text-white shadow-sm">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-cyan-500 to-blue-600 text-xs font-bold text-white shadow-sm">
                 {initials}
               </span>
               <span className="hidden text-xs font-medium text-slate-700 dark:text-slate-300 sm:block max-w-[100px] truncate">

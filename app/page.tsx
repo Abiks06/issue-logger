@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
+import type { Issue } from "@prisma/client";
 import { auth } from "@/auth";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -138,18 +139,25 @@ export default async function HomePage() {
   const session = await auth();
   const userId = session?.user?.id ? parseInt(session.user.id, 10) : -1;
 
-  const [issues, totalIssues, openIssues, inProgressIssues, closedIssues] =
-    await Promise.all([
-      prisma.issue.findMany({
-        where: { userId },
-        orderBy: { createdAt: "desc" },
-        take: 6,
-      }),
-      prisma.issue.count({ where: { userId } }),
-      prisma.issue.count({ where: { status: "OPEN", userId } }),
-      prisma.issue.count({ where: { status: "IN_PROGRESS", userId } }),
-      prisma.issue.count({ where: { status: "CLOSED", userId } }),
-    ]);
+  let issues: Issue[] = [];
+  let totalIssues = 0, openIssues = 0, inProgressIssues = 0, closedIssues = 0;
+
+  try {
+    [issues, totalIssues, openIssues, inProgressIssues, closedIssues] =
+      await Promise.all([
+        prisma.issue.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          take: 6,
+        }),
+        prisma.issue.count({ where: { userId } }),
+        prisma.issue.count({ where: { status: "OPEN", userId } }),
+        prisma.issue.count({ where: { status: "IN_PROGRESS", userId } }),
+        prisma.issue.count({ where: { status: "CLOSED", userId } }),
+      ]);
+  } catch (err) {
+    console.error("Dashboard data fetch failed:", err);
+  }
 
   const stats = [
     {
@@ -195,9 +203,9 @@ export default async function HomePage() {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
 
         {/* ── Hero banner ────────────────────────────────────────── */}
-        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-8 shadow-[0_12px_40px_-20px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900 sm:p-10">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-gradient-to-br from-cyan-400/20 to-blue-600/10 blur-3xl dark:from-cyan-500/10 dark:to-blue-700/5" />
-          <div className="pointer-events-none absolute -bottom-12 -left-12 h-48 w-48 rounded-full bg-gradient-to-tr from-violet-400/10 to-fuchsia-600/5 blur-3xl" />
+        <div className="card-shadow-lg relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-8 dark:border-slate-800 dark:bg-slate-900 sm:p-10">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-linear-to-br from-cyan-400/20 to-blue-600/10 blur-3xl dark:from-cyan-500/10 dark:to-blue-700/5" />
+          <div className="pointer-events-none absolute -bottom-12 -left-12 h-48 w-48 rounded-full bg-linear-to-tr from-violet-400/10 to-fuchsia-600/5 blur-3xl" />
 
           <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-2xl">
@@ -215,7 +223,7 @@ export default async function HomePage() {
             <Link
               href="/issues/new"
               id="hero-create-btn"
-              className="inline-flex w-fit items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all hover:shadow-cyan-500/40 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 dark:shadow-cyan-600/20"
+              className="inline-flex w-fit items-center gap-2 rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/25 transition-all hover:shadow-cyan-500/40 hover:brightness-110 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 dark:shadow-cyan-600/20"
             >
               + New Issue
             </Link>
@@ -227,7 +235,7 @@ export default async function HomePage() {
           {stats.map((stat) => (
             <div
               key={stat.label}
-              className={`${stat.bg} rounded-2xl border border-slate-200/80 p-5 shadow-[0_2px_8px_rgba(15,23,42,0.04)] transition-transform hover:-translate-y-0.5 dark:border-slate-800 dark:shadow-none`}
+              className={`${stat.bg} card-shadow rounded-2xl border border-slate-200/80 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgba(15,23,42,0.05),0_14px_34px_-10px_rgba(15,23,42,0.16)] hover:border-slate-200 dark:border-slate-800 dark:shadow-none dark:hover:shadow-none dark:hover:border-slate-700`}
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
@@ -256,7 +264,7 @@ export default async function HomePage() {
         <div className="grid gap-6 xl:grid-cols-[1fr_360px]">
 
           {/* Recent Issues */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="card-shadow rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">
@@ -312,7 +320,7 @@ export default async function HomePage() {
           <div className="flex flex-col gap-6">
 
             {/* Donut chart breakdown */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="card-shadow rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
               <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">
                 Breakdown
               </p>
@@ -345,7 +353,7 @@ export default async function HomePage() {
             </div>
 
             {/* Quick Actions */}
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="card-shadow rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
               <p className="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-600 dark:text-cyan-400">
                 Actions
               </p>

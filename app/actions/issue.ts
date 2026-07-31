@@ -22,7 +22,7 @@ export async function createIssue(data: IssueFormData) {
   const userId = await getCurrentUserId();
   const validation = createIssueSchema.safeParse(data);
   if (!validation.success) {
-    const { fieldErrors } = z.flattenError(validation.error);
+    const { fieldErrors } = validation.error.flatten();
     return { success: false, errors: fieldErrors };
   }
 
@@ -49,7 +49,7 @@ export async function updateIssue(id: number, data: EditIssueFormData) {
   const userId = await getCurrentUserId();
   const validation = editIssueSchema.safeParse(data);
   if (!validation.success) {
-    const { fieldErrors } = z.flattenError(validation.error);
+    const { fieldErrors } = validation.error.flatten();
     return { success: false, errors: fieldErrors };
   }
 

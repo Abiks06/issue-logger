@@ -10,7 +10,7 @@ type RegisterData = z.infer<typeof registerSchema>;
 export async function registerUser(data: RegisterData) {
   const parsed = registerSchema.safeParse(data);
   if (!parsed.success) {
-    const { fieldErrors } = z.flattenError(parsed.error);
+    const { fieldErrors } = parsed.error.flatten();
     return { success: false, errors: fieldErrors };
   }
 

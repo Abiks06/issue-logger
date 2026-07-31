@@ -10,8 +10,13 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const issue = await prisma.issue.findUnique({ where: { id: Number(id) } });
-  return { title: issue ? `Edit: ${issue.title}` : "Edit Issue" };
+  try {
+    const issue = await prisma.issue.findUnique({ where: { id: Number(id) } });
+    return { title: issue ? `Edit: ${issue.title}` : "Edit Issue" };
+  } catch (err) {
+    console.error("Edit page metadata fetch failed:", err);
+    return { title: "Edit Issue" };
+  }
 }
 
 export default async function EditIssuePage({ params }: Props) {
@@ -19,7 +24,13 @@ export default async function EditIssuePage({ params }: Props) {
   const userId = session?.user?.id ? parseInt(session.user.id, 10) : -1;
 
   const { id } = await params;
-  const issue = await prisma.issue.findUnique({ where: { id: Number(id) } });
+
+  let issue: Awaited<ReturnType<typeof prisma.issue.findUnique>> = null;
+  try {
+    issue = await prisma.issue.findUnique({ where: { id: Number(id) } });
+  } catch (err) {
+    console.error("Edit page data fetch failed:", err);
+  }
 
   if (!issue || issue.userId !== userId) notFound();
 

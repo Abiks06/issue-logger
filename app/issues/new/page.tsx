@@ -76,7 +76,7 @@ const NewIssuePage = () => {
           <span className="text-slate-700 dark:text-slate-200">New Issue</span>
         </nav>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_18px_45px_-20px_rgba(15,23,42,0.25)] sm:p-8 dark:border-slate-800 dark:bg-slate-900">
+        <div className="card-shadow-lg rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 dark:border-slate-800 dark:bg-slate-900">
           {/* Heading */}
           <div className="mb-6">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-600 dark:text-cyan-400">
@@ -159,7 +159,7 @@ const NewIssuePage = () => {
                 id="submit-issue-btn"
                 type="submit"
                 disabled={isPending}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-cyan-500/20 transition-all hover:brightness-110 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2"
+                className="inline-flex items-center gap-2 rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-cyan-500/20 transition-all hover:brightness-110 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2"
               >
                 {isPending ? (
                   <>

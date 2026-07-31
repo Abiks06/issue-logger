@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Maven_Pro } from "next/font/google";
 import "./globals.css";
 import NavBar from "./NavBar";
+import Footer from "./components/Footer";
 import { Toaster } from "react-hot-toast";
 import { Theme } from "@radix-ui/themes";
 import { ThemeProvider } from "next-themes";
@@ -31,9 +32,15 @@ export default async function RootLayout({
   const session = await auth();
   const userId = session?.user?.id ? parseInt(session.user.id, 10) : undefined;
 
-  const openIssueCount = userId
-    ? await prisma.issue.count({ where: { status: "OPEN", userId } })
-    : 0;
+  let openIssueCount = 0;
+  if (userId) {
+    try {
+      openIssueCount = await prisma.issue.count({ where: { status: "OPEN", userId } });
+    } catch {
+      // Fall back to 0 if the database query fails — layout renders anyway
+      openIssueCount = 0;
+    }
+  }
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -48,6 +55,7 @@ export default async function RootLayout({
             >
               <NavBar openIssueCount={openIssueCount} />
               <main className="flex-1">{children}</main>
+              <Footer />
               <Toaster
                 position="bottom-right"
                 toastOptions={{
