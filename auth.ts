@@ -15,19 +15,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     Credentials({
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
-        if (!parsed.success) return null;
+        if (!parsed.success) throw new Error("INVALID_CREDENTIALS");
 
+        const normalizedEmail = parsed.data.email.trim().toLowerCase();
         const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email },
+          where: { email: normalizedEmail },
         });
-        if (!user) return null;
+        if (!user) throw new Error("INVALID_CREDENTIALS");
 
         if (!user.emailVerified) {
-          return null;
+          throw new Error("EMAIL_NOT_VERIFIED");
         }
 
         const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
-        if (!valid) return null;
+        if (!valid) throw new Error("INVALID_CREDENTIALS");
 
         return { id: String(user.id), name: user.name, email: user.email };
       },

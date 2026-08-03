@@ -20,7 +20,11 @@ export default function RegisterPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<RegisterForm>({ resolver: zodResolver(registerSchema) });
+  } = useForm<RegisterForm>({
+    resolver: zodResolver(registerSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
+  });
 
   const router = useRouter();
   const [error, setError] = useState("");
@@ -39,21 +43,8 @@ export default function RegisterPage() {
         return;
       }
 
-      // Auto sign-in after register
-      const signInResult = await signIn("credentials", {
-        email: data.email,
-        password: data.password,
-        redirect: false,
-      });
-
-      if (signInResult?.error) {
-        setError("Account created! Please sign in manually.");
-        router.push("/auth/login");
-        return;
-      }
-
-      toast.success("Account created! Welcome 🎉");
-      router.push("/");
+      toast.success("Account created! Please verify your email before signing in.");
+      router.push("/auth/login");
       router.refresh();
     });
   });

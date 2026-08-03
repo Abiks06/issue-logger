@@ -19,7 +19,11 @@ export default function LoginPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginForm>({ resolver: zodResolver(loginSchema) });
+  } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
+  });
 
   const router = useRouter();
   const [error, setError] = useState("");
@@ -29,10 +33,15 @@ export default function LoginPage() {
     startTransition(async () => {
       setError("");
       const result = await signIn("credentials", {
-        email: data.email,
+        email: data.email.trim().toLowerCase(),
         password: data.password,
         redirect: false,
       });
+
+      if (result?.error === "EMAIL_NOT_VERIFIED") {
+        setError("Please verify your email before signing in. Check your inbox for the verification link.");
+        return;
+      }
 
       if (result?.error) {
         setError("Invalid email or password. Please try again.");

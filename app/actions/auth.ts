@@ -25,8 +25,10 @@ export async function registerUser(data: RegisterData) {
     return { success: false, errors: fieldErrors };
   }
 
+  const normalizedEmail = parsed.data.email.trim().toLowerCase();
+
   const existing = await prisma.user.findUnique({
-    where: { email: parsed.data.email },
+    where: { email: normalizedEmail },
   });
   if (existing) {
     return { success: false, errors: { email: ["An account with this email already exists."] } };
@@ -38,7 +40,7 @@ export async function registerUser(data: RegisterData) {
   await prisma.user.create({
     data: {
       name: parsed.data.name,
-      email: parsed.data.email,
+      email: normalizedEmail,
       passwordHash,
       verificationToken,
       verificationTokenExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
@@ -46,7 +48,7 @@ export async function registerUser(data: RegisterData) {
   });
 
   await sendMail({
-    to: parsed.data.email,
+    to: normalizedEmail,
     subject: "Verify your Issue Logger account",
     html: `
       <div style="font-family:Arial,sans-serif;line-height:1.5">
