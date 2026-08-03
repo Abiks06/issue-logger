@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ─── Colour tokens ───────────────────────────────────────────── */
 :root {
   --background: #f4f0ea;
@@ -119,12 +121,15 @@ html:not(.dark) select {
   border-color: var(--border) !important;
 }
 
+html:not(.dark) .text-slate-950,
+html:not(.dark) .text-\[\#0f172a\],
 html:not(.dark) .text-slate-900 {
-  color: var(--foreground) !important;
+  color: #0f172a !important;
 }
 
+html:not(.dark) .text-\[\#334155\],
 html:not(.dark) .text-slate-800 {
-  color: #243244 !important;
+  color: #1e293b !important;
 }
 
 html:not(.dark) .text-slate-700 {
@@ -132,21 +137,42 @@ html:not(.dark) .text-slate-700 {
 }
 
 html:not(.dark) .text-slate-600 {
-  color: var(--muted) !important;
+  color: #475569 !important;
 }
 
 html:not(.dark) .text-slate-500 {
-  color: var(--subtle) !important;
+  color: #64748b !important;
 }
 
 html:not(.dark) .text-slate-400 {
-  color: #7a879e !important;
+  color: #475569 !important;
 }
 
 html:not(.dark) .border-slate-200,
 html:not(.dark) .border-slate-200\/80,
 html:not(.dark) .border-slate-200\/70 {
   border-color: var(--border) !important;
+}
+
+/* ─── EasyMDE / SimpleMDE editor theme contrast ───────────────── */
+.EasyMDEContainer .CodeMirror {
+  background-color: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.dark .EasyMDEContainer .CodeMirror {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+.EasyMDEContainer .editor-toolbar a {
+  color: #0f172a !important;
+}
+
+.dark .EasyMDEContainer .editor-toolbar a {
+  color: #f8fafc !important;
 }
 
 /* ─── Card shadow utilities ─────────────────────────────────────
