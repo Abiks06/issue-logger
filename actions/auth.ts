@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { registerSchema } from "@/app/validationSchemas";
+import { registerSchema } from "@/lib/validationSchemas";
 import { z } from "zod";
 import { sendMail } from "@/lib/mail";
 
@@ -14,8 +14,10 @@ function createToken() {
 }
 
 function buildUrl(path: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-  return `${baseUrl}${path}`;
+  const rawUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl = rawUrl.replace(/\/+$/, "");
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `${baseUrl}${cleanPath}`;
 }
 
 export async function registerUser(data: RegisterData) {
@@ -47,19 +49,24 @@ export async function registerUser(data: RegisterData) {
     },
   });
 
-  await sendMail({
-    to: normalizedEmail,
-    subject: "Verify your Issue Logger account",
-    html: `
-      <div style="font-family:Arial,sans-serif;line-height:1.5">
-        <h2>Welcome to Issue Logger</h2>
-        <p>Hi ${parsed.data.name},</p>
-        <p>Please verify your account by clicking the link below:</p>
-        <p><a href="${buildUrl(`/auth/verify?token=${verificationToken}`)}">Verify account</a></p>
-        <p>If you didn't create this account, you can ignore this email.</p>
-      </div>
-    `,
-  });
+  try {
+    await sendMail({
+      to: normalizedEmail,
+      subject: "Verify your Issue Logger account",
+      html: `
+        <div style="font-family:Arial,sans-serif;line-height:1.5">
+          <h2>Welcome to Issue Logger</h2>
+          <p>Hi ${parsed.data.name},</p>
+          <p>Please verify your account by clicking the link below:</p>
+          <p><a href="${buildUrl(`/auth/verify?token=${verificationToken}`)}">Verify account</a></p>
+          <p>If you didn't create this account, you can ignore this email.</p>
+        </div>
+      `,
+    });
+  } catch (err) {
+    console.error("Failed to send verification email:", err);
+    // We don't return an error here so registration still completes successfully.
+  }
 
   return { success: true };
 }
@@ -103,19 +110,23 @@ export async function requestPasswordReset(email: string) {
     },
   });
 
-  await sendMail({
-    to: normalized,
-    subject: "Reset your Issue Logger password",
-    html: `
-      <div style="font-family:Arial,sans-serif;line-height:1.5">
-        <h2>Reset your password</h2>
-        <p>Hi ${user.name},</p>
-        <p>Use the link below to choose a new password:</p>
-        <p><a href="${buildUrl(`/auth/reset-password?token=${token}`)}">Reset password</a></p>
-        <p>If you didn't request this, you can ignore this email.</p>
-      </div>
-    `,
-  });
+  try {
+    await sendMail({
+      to: normalized,
+      subject: "Reset your Issue Logger password",
+      html: `
+        <div style="font-family:Arial,sans-serif;line-height:1.5">
+          <h2>Reset your password</h2>
+          <p>Hi ${user.name},</p>
+          <p>Use the link below to choose a new password:</p>
+          <p><a href="${buildUrl(`/auth/reset-password?token=${token}`)}">Reset password</a></p>
+          <p>If you didn't request this, you can ignore this email.</p>
+        </div>
+      `,
+    });
+  } catch (err) {
+    console.error("Failed to send password reset email:", err);
+  }
 
   return { success: true };
 }

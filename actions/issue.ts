@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db";
-import { createIssueSchema, editIssueSchema } from "@/app/validationSchemas";
+import { createIssueSchema, editIssueSchema } from "@/lib/validationSchemas";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/auth";

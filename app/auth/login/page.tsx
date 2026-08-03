@@ -3,13 +3,13 @@
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { loginSchema } from "@/app/validationSchemas";
+import { loginSchema } from "@/lib/validationSchemas";
 import { z } from "zod";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FaBug } from "react-icons/fa";
-import ErrorMessage from "@/app/components/ErrorMessage";
+import ErrorMessage from "@/components/ErrorMessage";
 import toast from "react-hot-toast";
 
 type LoginForm = z.infer<typeof loginSchema>;

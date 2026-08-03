@@ -1,49 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { resetPassword } from "@/app/actions/auth";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { resetPasswordSchema } from "@/lib/validationSchemas";
+import { z } from "zod";
+import { resetPassword } from "@/actions/auth";
+import ErrorMessage from "@/components/ErrorMessage";
 
-export default function ResetPasswordPage() {
+type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
+
+function ResetPasswordFormContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [token, setToken] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
-  const [isPending, setIsPending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ResetPasswordForm>({
+    resolver: zodResolver(resetPasswordSchema),
+    mode: "onBlur",
+    reValidateMode: "onChange",
+  });
 
   useEffect(() => {
     setToken(searchParams.get("token") || "");
   }, [searchParams]);
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setIsPending(true);
-    setMessage("");
+  const onSubmit = handleSubmit((data) => {
+    startTransition(async () => {
+      setMessage("");
 
-    if (password.length < 8) {
-      setMessage("Password must be at least 8 characters.");
-      setIsPending(false);
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setMessage("Passwords do not match.");
-      setIsPending(false);
-      return;
-    }
-
-    const result = await resetPassword(token, password);
-    setMessage(result.message || "");
-    setIsSuccess(result.success);
-    if (result.success) {
-      setTimeout(() => router.push("/auth/login"), 1500);
-    }
-    setIsPending(false);
-  }
+      const result = await resetPassword(token, data.password);
+      setMessage(result.message || "");
+      setIsSuccess(result.success);
+      if (result.success) {
+        setTimeout(() => router.push("/auth/login"), 1500);
+      }
+    });
+  });
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
@@ -58,29 +60,31 @@ export default function ResetPasswordPage() {
         </div>
 
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
-          <label className="text-sm font-medium text-slate-800 dark:text-slate-300" htmlFor="new-password">
-            New password
-          </label>
-          <input
-            id="new-password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-[#f8f4ec] px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20"
-          />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-slate-800 dark:text-slate-300" htmlFor="new-password">
+              New password
+            </label>
+            <input
+              id="new-password"
+              type="password"
+              className="w-full rounded-xl border border-slate-200 bg-[#f8f4ec] px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+              {...register("password")}
+            />
+            <ErrorMessage>{errors.password?.message}</ErrorMessage>
+          </div>
 
-          <label className="text-sm font-medium text-slate-800 dark:text-slate-300" htmlFor="confirm-password">
-            Confirm password
-          </label>
-          <input
-            id="confirm-password"
-            type="password"
-            required
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-[#f8f4ec] px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20"
-          />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-slate-800 dark:text-slate-300" htmlFor="confirm-password">
+              Confirm password
+            </label>
+            <input
+              id="confirm-password"
+              type="password"
+              className="w-full rounded-xl border border-slate-200 bg-[#f8f4ec] px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+              {...register("confirmPassword")}
+            />
+            <ErrorMessage>{errors.confirmPassword?.message}</ErrorMessage>
+          </div>
 
           <button
             type="submit"
@@ -104,5 +108,17 @@ export default function ResetPasswordPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-cyan-600 dark:border-slate-700 dark:border-t-cyan-500" />
+      </div>
+    }>
+      <ResetPasswordFormContent />
+    </Suspense>
   );
 }

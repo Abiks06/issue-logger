@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
-import IssueSearch from "@/app/components/IssueSearch";
+import IssueSearch from "@/components/IssueSearch";
 import type { Metadata } from "next";
 import type { Issue } from "@prisma/client";
 import { auth } from "@/auth";

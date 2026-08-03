@@ -7,10 +7,10 @@ import { useForm, Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createIssueSchema, priorityValues } from "@/app/validationSchemas";
+import { createIssueSchema, priorityValues } from "@/lib/validationSchemas";
 import { z } from "zod";
-import { createIssue } from "@/app/actions/issue";
-import ErrorMessage from "@/app/components/ErrorMessage";
+import { createIssue } from "@/actions/issue";
+import ErrorMessage from "@/components/ErrorMessage";
 import Link from "next/link";
 import toast from "react-hot-toast";
 

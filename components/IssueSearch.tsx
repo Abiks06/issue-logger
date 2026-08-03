@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Issue } from "@prisma/client";
-import IssueCard from "@/app/components/IssueCard";
+import IssueCard from "@/components/IssueCard";
 
 interface IssueSearchProps {
   initialIssues: Issue[];

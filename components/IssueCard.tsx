@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { Issue } from "@prisma/client";
-import { deleteIssue, updateIssueStatus } from "@/app/actions/issue";
+import { deleteIssue, updateIssueStatus } from "@/actions/issue";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Link from "next/link";

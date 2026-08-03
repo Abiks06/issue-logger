@@ -1,6 +1,6 @@
 const Spinner = () => {
   return (
-       <div role="status">
+    <div role="status">
       <svg xmlns="http://www.w3.org/2000/svg" className="size-9 shrink-0 animate-spin dark:fill-slate-50"
          viewBox="0 0 256 256" aria-hidden="true">
          <path
@@ -8,8 +8,8 @@ const Spinner = () => {
             data-original="#000000" />
       </svg>
       <span className="sr-only">Loading…</span>
-   </div>
-  )
-}
+    </div>
+  );
+};
 
-export default Spinner
+export default Spinner;

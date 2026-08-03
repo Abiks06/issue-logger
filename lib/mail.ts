@@ -26,10 +26,15 @@ export async function sendMail({
     return;
   }
 
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@example.com",
-    to,
-    subject,
-    html,
-  });
+  try {
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@example.com",
+      to,
+      subject,
+      html,
+    });
+  } catch (err) {
+    console.error("Nodemailer failed to send email:", err);
+    throw err;
+  }
 }
