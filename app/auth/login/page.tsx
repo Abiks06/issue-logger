@@ -60,10 +60,10 @@ export default function LoginPage() {
             <FaBug className="text-xl" />
           </span>
           <div className="text-center">
-            <h1 className="!text-[#0f172a] text-2xl font-bold tracking-tight dark:text-slate-50">
+            <h1 className="text-2xl font-bold tracking-tight text-[#0f172a] dark:text-slate-50">
               Sign in to Issue Logger
             </h1>
-            <p className="mt-1 text-sm !text-[#334155] dark:text-slate-400">
+            <p className="mt-1 text-sm text-[#334155] dark:text-slate-400">
               Track and manage your issues in one place.
             </p>
           </div>
@@ -80,7 +80,7 @@ export default function LoginPage() {
           <form onSubmit={onSubmit} className="flex flex-col gap-5">
             {/* Email */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="login-email" className="text-sm font-medium !text-[#0f172a] dark:text-slate-300">
+              <label htmlFor="login-email" className="text-sm font-medium text-[#0f172a] dark:text-slate-300">
                 Email address
               </label>
               <input
@@ -96,7 +96,7 @@ export default function LoginPage() {
 
             {/* Password */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="login-password" className="text-sm font-medium !text-[#0f172a] dark:text-slate-300">
+              <label htmlFor="login-password" className="text-sm font-medium text-[#0f172a] dark:text-slate-300">
                 Password
               </label>
               <input
