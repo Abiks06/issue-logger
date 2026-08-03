@@ -13,7 +13,7 @@ type PriorityFilter = "ALL" | "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 type SortKey = "newest" | "oldest" | "status" | "priority";
 
 const STATUS_TABS: { key: StatusFilter; label: string; colour: string }[] = [
-  { key: "ALL", label: "All", colour: "text-slate-600 dark:text-slate-400" },
+  { key: "ALL", label: "All", colour: "text-slate-800 dark:text-slate-400" },
   { key: "OPEN", label: "Open", colour: "text-rose-600 dark:text-rose-400" },
   { key: "IN_PROGRESS", label: "In Progress", colour: "text-amber-600 dark:text-amber-400" },
   { key: "CLOSED", label: "Closed", colour: "text-emerald-600 dark:text-emerald-400" },
@@ -84,7 +84,7 @@ export default function IssueSearch({ initialIssues }: IssueSearchProps) {
               className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-all ${
                 isActive
                   ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-sm shadow-cyan-500/20 dark:from-cyan-500 dark:to-blue-500 dark:text-slate-950"
-                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800"
+                  : "text-slate-700 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800"
               }`}
             >
               {tab.label}
@@ -92,7 +92,7 @@ export default function IssueSearch({ initialIssues }: IssueSearchProps) {
                 className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${
                   isActive
                     ? "bg-white/20 text-white dark:bg-slate-950/25 dark:text-slate-950"
-                    : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
+                    : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-500"
                 }`}
               >
                 {counts[tab.key] ?? 0}
@@ -116,13 +116,13 @@ export default function IssueSearch({ initialIssues }: IssueSearchProps) {
             placeholder="Search issues by title or description…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:shadow-none dark:placeholder:text-slate-500 dark:focus:border-cyan-500"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:shadow-none dark:placeholder:text-slate-500 dark:focus:border-cyan-500"
           />
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-1.5">
-            <label htmlFor="priority-select" className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+            <label htmlFor="priority-select" className="text-xs font-medium text-slate-700 dark:text-slate-400 whitespace-nowrap">
               Priority
             </label>
             <select
@@ -140,7 +140,7 @@ export default function IssueSearch({ initialIssues }: IssueSearchProps) {
           </div>
 
           <div className="flex items-center gap-1.5">
-            <label htmlFor="sort-select" className="text-xs font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
+            <label htmlFor="sort-select" className="text-xs font-medium text-slate-700 dark:text-slate-400 whitespace-nowrap">
               Sort by
             </label>
             <select
@@ -160,8 +160,8 @@ export default function IssueSearch({ initialIssues }: IssueSearchProps) {
 
       {/* Result count */}
       <div className="flex items-center justify-between px-1">
-        <p className="text-xs text-slate-400 dark:text-slate-500">
-          Showing <span className="font-semibold text-slate-600 dark:text-slate-300">{filteredIssues.length}</span>{" "}
+        <p className="text-xs text-slate-600 dark:text-slate-500">
+          Showing <span className="font-semibold text-slate-800 dark:text-slate-300">{filteredIssues.length}</span>{" "}
           {filteredIssues.length === 1 ? "issue" : "issues"}
           {statusFilter !== "ALL" ? ` · ${statusFilter.replace("_", " ")}` : ""}
           {priorityFilter !== "ALL" ? ` · ${priorityFilter} priority` : ""}
@@ -185,8 +185,8 @@ export default function IssueSearch({ initialIssues }: IssueSearchProps) {
         {filteredIssues.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center dark:border-slate-700 dark:bg-slate-900">
             <p className="text-2xl">🔍</p>
-            <p className="mt-2 font-medium text-slate-700 dark:text-slate-300">No issues found</p>
-            <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">
+            <p className="mt-2 font-medium text-slate-800 dark:text-slate-300">No issues found</p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-500">
               {query ? "Try a different search term." : "No issues match the selected filter."}
             </p>
           </div>

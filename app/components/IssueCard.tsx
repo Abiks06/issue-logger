@@ -102,7 +102,7 @@ function IssueCard({ issue }: IssueCardProps) {
           <button
             onClick={copyIssueId}
             title="Click to copy issue reference"
-            className="rounded-md border border-slate-100 bg-slate-50 px-2 py-0.5 text-xs font-mono font-medium text-slate-500 transition-colors hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-600 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:border-cyan-500 dark:hover:bg-cyan-950/30 dark:hover:text-cyan-400"
+            className="rounded-md border border-slate-100 bg-slate-50 px-2 py-0.5 text-xs font-mono font-medium text-slate-700 transition-colors hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-600 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:border-cyan-500 dark:hover:bg-cyan-950/30 dark:hover:text-cyan-400"
           >
             #{issue.id}
           </button>
@@ -118,7 +118,7 @@ function IssueCard({ issue }: IssueCardProps) {
 
       {/* Description */}
       <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-4 dark:border-slate-800/50 dark:bg-slate-800/30">
-        <div className="prose prose-slate max-w-none text-sm leading-6 text-slate-700 dark:prose-invert dark:text-slate-300">
+        <div className="prose prose-slate max-w-none text-sm leading-6 text-slate-800 dark:prose-invert dark:text-slate-300">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayDescription}</ReactMarkdown>
         </div>
         {isLongDescription && (
@@ -133,7 +133,7 @@ function IssueCard({ issue }: IssueCardProps) {
 
       {/* Footer */}
       <div className="mt-4 flex items-center justify-between gap-3">
-        <span suppressHydrationWarning className="text-xs text-slate-400 dark:text-slate-500">
+        <span suppressHydrationWarning className="text-xs text-slate-600 dark:text-slate-500">
           Created{" "}
           {new Date(issue.createdAt).toLocaleDateString("en-US", {
             month: "short",
@@ -146,7 +146,7 @@ function IssueCard({ issue }: IssueCardProps) {
           {/* Edit link */}
           <Link
             href={`/issues/${issue.id}/edit`}
-            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-800 transition-colors hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             Edit
           </Link>
@@ -176,7 +176,7 @@ function IssueCard({ issue }: IssueCardProps) {
             <button
               disabled={isPending}
               onClick={() => handleStatusChange("OPEN")}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-800 transition-colors hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
             >
               {pendingAction === "OPEN" ? "Reopening…" : "Reopen"}
             </button>
@@ -197,7 +197,7 @@ function IssueCard({ issue }: IssueCardProps) {
               </button>
               <button
                 onClick={() => setConfirmDelete(false)}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
               >
                 Cancel
               </button>

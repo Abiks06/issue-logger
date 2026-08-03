@@ -118,7 +118,7 @@ const NavBar = ({ openIssueCount = 0 }: NavBarProps) => {
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-cyan-500 to-blue-600 text-xs font-bold text-white shadow-sm">
                 {initials}
               </span>
-              <span className="hidden text-xs font-medium text-slate-700 dark:text-slate-300 sm:block max-w-[100px] truncate">
+              <span className="hidden text-xs font-semibold text-slate-900 dark:text-slate-300 sm:block max-w-[100px] truncate">
                 {session.user.name}
               </span>
             </div>

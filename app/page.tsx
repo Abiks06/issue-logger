@@ -127,7 +127,7 @@ function DonutChart({
         <span className="text-2xl font-bold text-slate-900 dark:text-slate-50">
           {total}
         </span>
-        <span className="text-xs text-slate-500 dark:text-slate-400">issues</span>
+        <span className="text-xs text-slate-700 dark:text-slate-400">issues</span>
       </div>
     </div>
   );
@@ -215,7 +215,7 @@ export default async function HomePage() {
               <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl dark:text-slate-50">
                 Stay on top of every issue.
               </h1>
-              <p className="mt-3 leading-7 text-slate-600 dark:text-slate-400">
+              <p className="mt-3 leading-7 text-slate-700 dark:text-slate-400">
                 A modern summary of your current workload, progress, and the latest problems that need attention.
               </p>
             </div>
@@ -238,7 +238,7 @@ export default async function HomePage() {
               className={`${stat.bg} card-shadow rounded-2xl border border-slate-200/80 p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgba(15,23,42,0.05),0_14px_34px_-10px_rgba(15,23,42,0.16)] hover:border-slate-200 dark:border-slate-800 dark:shadow-none dark:hover:shadow-none dark:hover:border-slate-700`}
             >
               <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 dark:text-slate-400">
                   {stat.label}
                 </p>
                 <span className="text-xl">{stat.icon}</span>
@@ -253,7 +253,7 @@ export default async function HomePage() {
                   style={{ width: `${stat.percent}%` }}
                 />
               </div>
-              <p className="mt-1.5 text-right text-xs text-slate-400 dark:text-slate-500">
+              <p className="mt-1.5 text-right text-xs text-slate-600 dark:text-slate-500">
                 {stat.percent}% of total
               </p>
             </div>
@@ -342,7 +342,7 @@ export default async function HomePage() {
                   <div key={item.label} className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2">
                       <span className={`h-2.5 w-2.5 rounded-full ${item.color}`} />
-                      <span className="text-slate-600 dark:text-slate-400">{item.label}</span>
+                      <span className="text-slate-700 dark:text-slate-400">{item.label}</span>
                     </div>
                     <span className="font-semibold tabular-nums text-slate-800 dark:text-slate-200">
                       {item.value}

@@ -14,16 +14,16 @@ const Footer = () => {
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 text-[13px] text-white shadow-sm shadow-cyan-500/20">
             🐞
           </span>
-          <span className="text-sm font-semibold tracking-tight text-slate-700 dark:text-slate-200">
+          <span className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-200">
             Issue Logger
           </span>
-          <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+          <span className="rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
             v0.1.0
           </span>
         </div>
 
         {/* Made with love */}
-        <p className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400">
+        <p className="flex items-center gap-1.5 text-sm text-slate-700 dark:text-slate-400">
           Made with
           <span className={`inline-block ${BEAT} text-rose-500 drop-shadow-[0_0_6px_rgba(244,63,94,0.55)]`} aria-hidden="true">
             ❤️
@@ -33,7 +33,7 @@ const Footer = () => {
         </p>
 
         {/* Copyright */}
-        <p className="text-xs text-slate-400 dark:text-slate-500">
+        <p className="text-xs text-slate-600 dark:text-slate-500">
           © {new Date().getFullYear()} Issue Logger. All rights reserved.
         </p>
       </div>

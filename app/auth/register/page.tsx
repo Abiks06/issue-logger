@@ -73,10 +73,10 @@ export default function RegisterPage() {
             <FaBug className="text-xl" />
           </span>
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-950 dark:text-slate-50">
+            <h1 className="!text-[#0f172a] text-2xl font-bold tracking-tight dark:text-slate-50">
               Create your account
             </h1>
-            <p className="mt-1 text-sm text-slate-700 dark:text-slate-400">
+            <p className="mt-1 text-sm !text-[#334155] dark:text-slate-400">
               Start tracking your issues in under a minute.
             </p>
           </div>
@@ -93,7 +93,7 @@ export default function RegisterPage() {
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
             {/* Name */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="reg-name" className="text-sm font-medium text-slate-800 dark:text-slate-300">
+              <label htmlFor="reg-name" className="text-sm font-medium !text-[#0f172a] dark:text-slate-300">
                 Full name
               </label>
               <input
@@ -109,7 +109,7 @@ export default function RegisterPage() {
 
             {/* Email */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="reg-email" className="text-sm font-medium text-slate-800 dark:text-slate-300">
+              <label htmlFor="reg-email" className="text-sm font-medium !text-[#0f172a] dark:text-slate-300">
                 Email address
               </label>
               <input
@@ -125,7 +125,7 @@ export default function RegisterPage() {
 
             {/* Password */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="reg-password" className="text-sm font-medium text-slate-800 dark:text-slate-300">
+              <label htmlFor="reg-password" className="text-sm font-medium !text-[#0f172a] dark:text-slate-300">
                 Password <span className="text-slate-500 font-normal">(min 8 chars)</span>
               </label>
               <input
@@ -141,7 +141,7 @@ export default function RegisterPage() {
 
             {/* Confirm password */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="reg-confirm" className="text-sm font-medium text-slate-800 dark:text-slate-300">
+              <label htmlFor="reg-confirm" className="text-sm font-medium !text-[#0f172a] dark:text-slate-300">
                 Confirm password
               </label>
               <input
@@ -165,7 +165,7 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-700 dark:text-slate-400">
+          <p className="mt-6 text-center text-sm text-slate-800 dark:text-slate-400">
             Already have an account?{" "}
             <Link href="/auth/login" className="font-medium text-cyan-700 hover:underline dark:text-cyan-400">
               Sign in
