@@ -25,12 +25,17 @@ enum Priority {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  name         String
-  email        String   @unique
-  passwordHash String
-  createdAt    DateTime @default(now())
-  issues       Issue[]
+  id                           Int       @id @default(autoincrement())
+  name                         String
+  email                        String    @unique
+  passwordHash                 String
+  emailVerified                Boolean   @default(false)
+  verificationToken            String?   @db.VarChar(255)
+  verificationTokenExpiresAt   DateTime?
+  passwordResetToken           String?   @db.VarChar(255)
+  passwordResetTokenExpiresAt  DateTime?
+  createdAt                    DateTime  @default(now())
+  issues                       Issue[]
 }
 
 model Issue {

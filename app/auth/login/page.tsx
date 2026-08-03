@@ -60,17 +60,17 @@ export default function LoginPage() {
             <FaBug className="text-xl" />
           </span>
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-950 dark:text-slate-50">
               Sign in to Issue Logger
             </h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-sm text-slate-700 dark:text-slate-400">
               Track and manage your issues in one place.
             </p>
           </div>
         </div>
 
         {/* Card */}
-        <div className="card-shadow-lg rounded-2xl border border-slate-200/80 bg-white p-8 dark:border-slate-800 dark:bg-slate-900">
+        <div className="card-shadow-lg rounded-2xl border border-slate-200/80 bg-[#fcfbf8] p-8 dark:border-slate-800 dark:bg-slate-900">
           {error && (
             <div className="mb-5 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400">
               <span>⚠</span> {error}
@@ -80,7 +80,7 @@ export default function LoginPage() {
           <form onSubmit={onSubmit} className="flex flex-col gap-5">
             {/* Email */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="login-email" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label htmlFor="login-email" className="text-sm font-medium text-slate-800 dark:text-slate-300">
                 Email address
               </label>
               <input
@@ -88,7 +88,7 @@ export default function LoginPage() {
                 type="email"
                 placeholder="you@example.com"
                 autoComplete="email"
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+                className="w-full rounded-xl border border-slate-200 bg-[#f8f4ec] px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
                 {...register("email")}
               />
               <ErrorMessage>{errors.email?.message}</ErrorMessage>
@@ -96,7 +96,7 @@ export default function LoginPage() {
 
             {/* Password */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="login-password" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label htmlFor="login-password" className="text-sm font-medium text-slate-800 dark:text-slate-300">
                 Password
               </label>
               <input
@@ -104,7 +104,7 @@ export default function LoginPage() {
                 type="password"
                 placeholder="••••••••"
                 autoComplete="current-password"
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+                className="w-full rounded-xl border border-slate-200 bg-[#f8f4ec] px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
                 {...register("password")}
               />
               <ErrorMessage>{errors.password?.message}</ErrorMessage>
@@ -120,12 +120,17 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-            Don&apos;t have an account?{" "}
-            <Link href="/auth/register" className="font-medium text-cyan-600 hover:underline dark:text-cyan-400">
-              Create one
+          <div className="mt-2 flex items-center justify-between text-sm text-slate-700 dark:text-slate-400">
+            <Link href="/auth/forgot-password" className="font-medium text-cyan-700 hover:underline dark:text-cyan-400">
+              Forgot password?
             </Link>
-          </p>
+            <p>
+              Don&apos;t have an account?{" "}
+              <Link href="/auth/register" className="font-medium text-cyan-700 hover:underline dark:text-cyan-400">
+                Create one
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>

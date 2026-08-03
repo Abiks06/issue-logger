@@ -73,17 +73,17 @@ export default function RegisterPage() {
             <FaBug className="text-xl" />
           </span>
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-950 dark:text-slate-50">
               Create your account
             </h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-sm text-slate-700 dark:text-slate-400">
               Start tracking your issues in under a minute.
             </p>
           </div>
         </div>
 
         {/* Card */}
-        <div className="card-shadow-lg rounded-2xl border border-slate-200/80 bg-white p-8 dark:border-slate-800 dark:bg-slate-900">
+        <div className="card-shadow-lg rounded-2xl border border-slate-200/80 bg-[#fcfbf8] p-8 dark:border-slate-800 dark:bg-slate-900">
           {error && (
             <div className="mb-5 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400">
               <span>⚠</span> {error}
@@ -93,7 +93,7 @@ export default function RegisterPage() {
           <form onSubmit={onSubmit} className="flex flex-col gap-4">
             {/* Name */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="reg-name" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label htmlFor="reg-name" className="text-sm font-medium text-slate-800 dark:text-slate-300">
                 Full name
               </label>
               <input
@@ -101,7 +101,7 @@ export default function RegisterPage() {
                 type="text"
                 placeholder="Jane Smith"
                 autoComplete="name"
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+                className="w-full rounded-xl border border-slate-200 bg-[#f8f4ec] px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
                 {...register("name")}
               />
               <ErrorMessage>{errors.name?.message}</ErrorMessage>
@@ -109,7 +109,7 @@ export default function RegisterPage() {
 
             {/* Email */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="reg-email" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label htmlFor="reg-email" className="text-sm font-medium text-slate-800 dark:text-slate-300">
                 Email address
               </label>
               <input
@@ -117,7 +117,7 @@ export default function RegisterPage() {
                 type="email"
                 placeholder="you@example.com"
                 autoComplete="email"
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+                className="w-full rounded-xl border border-slate-200 bg-[#f8f4ec] px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
                 {...register("email")}
               />
               <ErrorMessage>{errors.email?.message}</ErrorMessage>
@@ -125,15 +125,15 @@ export default function RegisterPage() {
 
             {/* Password */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="reg-password" className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                Password <span className="text-slate-400 font-normal">(min 8 chars)</span>
+              <label htmlFor="reg-password" className="text-sm font-medium text-slate-800 dark:text-slate-300">
+                Password <span className="text-slate-500 font-normal">(min 8 chars)</span>
               </label>
               <input
                 id="reg-password"
                 type="password"
                 placeholder="••••••••"
                 autoComplete="new-password"
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+                className="w-full rounded-xl border border-slate-200 bg-[#f8f4ec] px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
                 {...register("password")}
               />
               <ErrorMessage>{errors.password?.message}</ErrorMessage>
@@ -141,7 +141,7 @@ export default function RegisterPage() {
 
             {/* Confirm password */}
             <div className="flex flex-col gap-1.5">
-              <label htmlFor="reg-confirm" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label htmlFor="reg-confirm" className="text-sm font-medium text-slate-800 dark:text-slate-300">
                 Confirm password
               </label>
               <input
@@ -149,7 +149,7 @@ export default function RegisterPage() {
                 type="password"
                 placeholder="••••••••"
                 autoComplete="new-password"
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
+                className="w-full rounded-xl border border-slate-200 bg-[#f8f4ec] px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-500"
                 {...register("confirmPassword")}
               />
               <ErrorMessage>{errors.confirmPassword?.message}</ErrorMessage>
@@ -165,9 +165,9 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-6 text-center text-sm text-slate-700 dark:text-slate-400">
             Already have an account?{" "}
-            <Link href="/auth/login" className="font-medium text-cyan-600 hover:underline dark:text-cyan-400">
+            <Link href="/auth/login" className="font-medium text-cyan-700 hover:underline dark:text-cyan-400">
               Sign in
             </Link>
           </p>
