@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
@@ -6,6 +6,14 @@ import { loginSchema } from "@/lib/validationSchemas";
 
 if (!process.env.NEXTAUTH_URL && process.env.VERCEL_URL) {
   process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+}
+
+class InvalidCredentialsError extends CredentialsSignin {
+  code = "INVALID_CREDENTIALS";
+}
+
+class EmailNotVerifiedError extends CredentialsSignin {
+  code = "EMAIL_NOT_VERIFIED";
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -26,7 +34,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) {
           console.warn("Credentials validation failed", credentials);
-          throw new Error("INVALID_CREDENTIALS");
+          throw new InvalidCredentialsError();
         }
 
         const normalizedEmail = parsed.data.email.trim().toLowerCase();
@@ -35,18 +43,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         });
         if (!user) {
           console.warn("No user found for login", { email: normalizedEmail });
-          throw new Error("INVALID_CREDENTIALS");
+          throw new InvalidCredentialsError();
         }
 
         if (!user.emailVerified) {
           console.warn("Unverified login attempt", { email: normalizedEmail });
-          throw new Error("EMAIL_NOT_VERIFIED");
+          throw new EmailNotVerifiedError();
         }
 
         const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
         if (!valid) {
           console.warn("Invalid password for user", { email: normalizedEmail });
-          throw new Error("INVALID_CREDENTIALS");
+          throw new InvalidCredentialsError();
         }
 
         return { id: String(user.id), name: user.name, email: user.email };

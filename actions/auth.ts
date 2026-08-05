@@ -43,13 +43,16 @@ export async function registerUser(data: RegisterData) {
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
   const verificationToken = createToken();
 
+  const isDev = process.env.NODE_ENV !== "production";
+
   await prisma.user.create({
     data: {
       name: parsed.data.name,
       email: normalizedEmail,
       passwordHash,
-      verificationToken,
-      verificationTokenExpiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24),
+      emailVerified: isDev,
+      verificationToken: isDev ? null : verificationToken,
+      verificationTokenExpiresAt: isDev ? null : new Date(Date.now() + 1000 * 60 * 60 * 24),
     },
   });
 
