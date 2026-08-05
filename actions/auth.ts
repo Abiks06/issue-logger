@@ -14,7 +14,11 @@ function createToken() {
 }
 
 function buildUrl(path: string) {
-  const rawUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const rawUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXTAUTH_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined) ||
+    "http://localhost:3000";
   const baseUrl = rawUrl.replace(/\/+$/, "");
   const cleanPath = path.startsWith("/") ? path : `/${path}`;
   return `${baseUrl}${cleanPath}`;
@@ -126,6 +130,7 @@ export async function requestPasswordReset(email: string) {
     });
   } catch (err) {
     console.error("Failed to send password reset email:", err);
+    return { success: false };
   }
 
   return { success: true };

@@ -4,6 +4,10 @@ import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { loginSchema } from "@/lib/validationSchemas";
 
+if (!process.env.NEXTAUTH_URL && process.env.VERCEL_URL) {
+  process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   secret: process.env.NEXTAUTH_SECRET,

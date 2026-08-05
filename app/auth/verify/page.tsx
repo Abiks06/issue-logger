@@ -13,7 +13,13 @@ function VerifyContent() {
 
   useEffect(() => {
     async function verify() {
-      const token = searchParams.get("token") || "";
+      const token = searchParams.get("token");
+      if (!token) {
+        setMessage("Verification token is missing. Use the link in your email.");
+        setIsSuccess(false);
+        return;
+      }
+
       const result = await verifyEmail(token);
       setMessage(result.message || "");
       setIsSuccess(result.success);

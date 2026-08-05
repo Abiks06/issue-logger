@@ -22,8 +22,9 @@ export async function sendMail({
   html: string;
 }) {
   if (!process.env.SMTP_HOST) {
-    console.warn("SMTP_HOST is not configured; skipping email send.");
-    return;
+    const error = new Error("SMTP_HOST is not configured; email delivery is unavailable.");
+    console.error(error);
+    throw error;
   }
 
   try {

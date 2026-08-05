@@ -15,7 +15,7 @@ type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
 function ResetPasswordFormContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [isSuccess, setIsSuccess] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -31,12 +31,26 @@ function ResetPasswordFormContent() {
   });
 
   useEffect(() => {
-    setToken(searchParams.get("token") || "");
+    const tokenParam = searchParams.get("token");
+    if (!tokenParam) {
+      setToken(null);
+      setMessage("Reset token is missing. Request a new password reset link.");
+      setIsSuccess(false);
+      return;
+    }
+
+    setToken(tokenParam);
   }, [searchParams]);
 
   const onSubmit = handleSubmit((data) => {
     startTransition(async () => {
       setMessage("");
+
+      if (!token) {
+        setMessage("Reset token is missing. Request a new password reset link.");
+        setIsSuccess(false);
+        return;
+      }
 
       const result = await resetPassword(token, data.password);
       setMessage(result.message || "");
@@ -88,7 +102,7 @@ function ResetPasswordFormContent() {
 
           <button
             type="submit"
-            disabled={isPending}
+            disabled={isPending || !token}
             className="inline-flex w-full items-center justify-center rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-cyan-500/20 transition-all hover:brightness-110 disabled:opacity-60"
           >
             {isPending ? "Updating…" : "Update password"}
