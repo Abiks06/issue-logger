@@ -83,7 +83,7 @@ export default function IssueSearch({ initialIssues }: IssueSearchProps) {
               onClick={() => setStatusFilter(tab.key)}
               className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-all ${
                 isActive
-                  ? "bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-sm shadow-cyan-500/20 dark:from-cyan-500 dark:to-blue-500 dark:text-slate-950"
+                  ? "bg-linear-to-r from-cyan-600 to-blue-600 text-white shadow-sm shadow-cyan-500/20 dark:from-cyan-500 dark:to-blue-500 dark:text-slate-950"
                   : "text-slate-700 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800"
               }`}
             >

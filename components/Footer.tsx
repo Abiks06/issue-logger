@@ -6,12 +6,12 @@ const Footer = () => {
   return (
     <footer className="relative mt-auto border-t border-slate-200/80 bg-white/70 py-8 shadow-[0_-4px_16px_-12px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/70 dark:shadow-none">
       {/* Top glow accent */}
-      <div className="pointer-events-none absolute inset-x-0 -top-px mx-auto h-px w-2/3 bg-gradient-to-r from-transparent via-cyan-400/60 to-transparent dark:via-cyan-500/40" />
+      <div className="pointer-events-none absolute inset-x-0 -top-px mx-auto h-px w-2/3 bg-linear-to-r from-transparent via-cyan-400/60 to-transparent dark:via-cyan-500/40" />
 
       <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-4 px-4 sm:flex-row sm:justify-between sm:px-6 lg:px-8">
         {/* Brand */}
         <div className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 text-[13px] text-white shadow-sm shadow-cyan-500/20">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-linear-to-br from-cyan-500 to-blue-600 text-[13px] text-white shadow-sm shadow-cyan-500/20">
             🐞
           </span>
           <span className="text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-200">

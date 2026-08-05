@@ -1,2 +1,0 @@
--- AlterTable
-ALTER TABLE `issue` ADD COLUMN `priority` ENUM('LOW', 'MEDIUM', 'HIGH', 'CRITICAL') NOT NULL DEFAULT 'MEDIUM';

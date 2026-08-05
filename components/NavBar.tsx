@@ -78,7 +78,7 @@ const NavBar = ({ openIssueCount = 0 }: NavBarProps) => {
                 {link.label}
                 {/* Open issue count badge */}
                 {link.count !== undefined && link.count > 0 && (
-                  <span className="ml-0.5 flex h-4.5 min-w-[1.125rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white">
+                  <span className="ml-0.5 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold leading-none text-white">
                     {link.count > 99 ? "99+" : link.count}
                   </span>
                 )}
@@ -118,7 +118,7 @@ const NavBar = ({ openIssueCount = 0 }: NavBarProps) => {
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-linear-to-br from-cyan-500 to-blue-600 text-xs font-bold text-white shadow-sm">
                 {initials}
               </span>
-              <span className="hidden text-xs font-semibold text-slate-900 dark:text-slate-300 sm:block max-w-[100px] truncate">
+              <span className="hidden text-xs font-semibold text-slate-900 dark:text-slate-300 sm:block max-w-25 truncate">
                 {session.user.name}
               </span>
             </div>
