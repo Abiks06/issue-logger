@@ -32,8 +32,19 @@ This app requires the following environment variables in production (for Vercel,
 - `SMTP_USER`
 - `SMTP_PASS`
 - `SMTP_FROM`
+- `CLEAR_DB_SECRET`
 
 > The `.env` file is local only and is not automatically used by Vercel.
+
+## Clearing your deployed Aiven database
+
+If you need to clear the deployed database, add `CLEAR_DB_SECRET` to Vercel and then call the admin endpoint:
+
+```bash
+curl -X POST https://<your-deployment>/api/admin/clear-db -H "x-clear-db-secret: <CLEAR_DB_SECRET>"
+```
+
+This will delete all `User` and `Issue` records.
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
