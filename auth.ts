@@ -17,22 +17,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   providers: [
     Credentials({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email", placeholder: "you@example.com" },
+        password: { label: "Password", type: "password" },
+      },
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
-        if (!parsed.success) throw new Error("INVALID_CREDENTIALS");
+        if (!parsed.success) {
+          console.warn("Credentials validation failed", credentials);
+          throw new Error("INVALID_CREDENTIALS");
+        }
 
         const normalizedEmail = parsed.data.email.trim().toLowerCase();
         const user = await prisma.user.findUnique({
           where: { email: normalizedEmail },
         });
-        if (!user) throw new Error("INVALID_CREDENTIALS");
+        if (!user) {
+          console.warn("No user found for login", { email: normalizedEmail });
+          throw new Error("INVALID_CREDENTIALS");
+        }
 
         if (!user.emailVerified) {
+          console.warn("Unverified login attempt", { email: normalizedEmail });
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
         const valid = await bcrypt.compare(parsed.data.password, user.passwordHash);
-        if (!valid) throw new Error("INVALID_CREDENTIALS");
+        if (!valid) {
+          console.warn("Invalid password for user", { email: normalizedEmail });
+          throw new Error("INVALID_CREDENTIALS");
+        }
 
         return { id: String(user.id), name: user.name, email: user.email };
       },
