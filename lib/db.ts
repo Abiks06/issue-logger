@@ -2,23 +2,26 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import pg from 'pg';
 
-const globalWithPrisma = globalThis as typeof globalThis & {
-  prisma?: PrismaClient;
-};
-
-let prisma: PrismaClient;
-
-if (typeof window === 'undefined') {
-  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
-  const adapter = new PrismaPg(pool);
-  
-  prisma = globalWithPrisma.prisma || new PrismaClient({ adapter });
-
-  if (process.env.NODE_ENV !== 'production') {
-    globalWithPrisma.prisma = prisma;
-  }
-} else {
-  prisma = new PrismaClient();
+declare global {
+  // eslint-disable-next-line no-var
+  var prisma: PrismaClient | undefined;
 }
 
-export { prisma };
+function createPrismaClient() {
+  // Strip pgbouncer param — the pg driver doesn't understand it;
+  // Prisma 7 driver adapter handles pooling directly via pg.Pool.
+  const connectionString = (process.env.DATABASE_URL ?? '').replace(
+    '?pgbouncer=true',
+    ''
+  );
+  const pool = new pg.Pool({ connectionString });
+  const adapter = new PrismaPg(pool);
+  return new PrismaClient({ adapter });
+}
+
+export const prisma = globalThis.prisma ?? createPrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalThis.prisma = prisma;
+}
+
