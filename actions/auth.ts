@@ -53,11 +53,10 @@ export async function registerUser(data: RegisterData) {
     },
   });
 
-  try {
-    await sendMail({
-      to: normalizedEmail,
-      subject: "Verify your Issue Logger account",
-      html: `
+  void sendMail({
+    to: normalizedEmail,
+    subject: "Verify your Issue Logger account",
+    html: `
         <div style="font-family:Arial,sans-serif;line-height:1.5">
           <h2>Welcome to Issue Logger</h2>
           <p>Hi ${parsed.data.name},</p>
@@ -66,11 +65,9 @@ export async function registerUser(data: RegisterData) {
           <p>If you didn't create this account, you can ignore this email.</p>
         </div>
       `,
-    });
-  } catch (err) {
+  }).catch((err) => {
     console.error("Failed to send verification email:", err);
-    // We don't return an error here so registration still completes successfully.
-  }
+  });
 
   return { success: true };
 }
@@ -97,6 +94,43 @@ export async function verifyEmail(token: string) {
   return { success: true, message: "Email verified successfully." };
 }
 
+export async function resendVerificationEmail(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+  if (!user) {
+    return { success: true };
+  }
+
+  const token = user.verificationToken || createToken();
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      verificationToken: token,
+      verificationTokenExpiresAt: expiresAt,
+    },
+  });
+
+  void sendMail({
+    to: normalizedEmail,
+    subject: "Verify your Issue Logger account",
+    html: `
+        <div style="font-family:Arial,sans-serif;line-height:1.5">
+          <h2>Verify your email</h2>
+          <p>Hi ${user.name},</p>
+          <p>Click the link below to verify your account:</p>
+          <p><a href="${buildUrl(`/auth/verify?token=${token}`)}">Verify account</a></p>
+          <p>If you didn't request this, you can ignore this email.</p>
+        </div>
+      `,
+  }).catch((err) => {
+    console.error("Failed to send verification email:", err);
+  });
+
+  return { success: true };
+}
+
 export async function requestPasswordReset(email: string) {
   const normalized = email.trim().toLowerCase();
   const user = await prisma.user.findUnique({ where: { email: normalized } });
@@ -114,11 +148,10 @@ export async function requestPasswordReset(email: string) {
     },
   });
 
-  try {
-    await sendMail({
-      to: normalized,
-      subject: "Reset your Issue Logger password",
-      html: `
+  void sendMail({
+    to: normalized,
+    subject: "Reset your Issue Logger password",
+    html: `
         <div style="font-family:Arial,sans-serif;line-height:1.5">
           <h2>Reset your password</h2>
           <p>Hi ${user.name},</p>
@@ -127,11 +160,9 @@ export async function requestPasswordReset(email: string) {
           <p>If you didn't request this, you can ignore this email.</p>
         </div>
       `,
-    });
-  } catch (err) {
+  }).catch((err) => {
     console.error("Failed to send password reset email:", err);
-    return { success: false };
-  }
+  });
 
   return { success: true };
 }

@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema } from "@/lib/validationSchemas";
 import { z } from "zod";
 import { signIn } from "next-auth/react";
+import { resendVerificationEmail } from "@/actions/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FaBug } from "react-icons/fa";
@@ -27,19 +28,30 @@ export default function LoginPage() {
 
   const router = useRouter();
   const [error, setError] = useState("");
+  const [showResendLink, setShowResendLink] = useState(false);
+  const [lastEmail, setLastEmail] = useState("");
+  const [resendMessage, setResendMessage] = useState("");
+  const [isResendPending, setIsResendPending] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const onSubmit = handleSubmit((data) => {
     startTransition(async () => {
       setError("");
+      setShowResendLink(false);
+      setResendMessage("");
+      const email = data.email.trim().toLowerCase();
+      setLastEmail(email);
+
       const result = await signIn("credentials", {
-        email: data.email.trim().toLowerCase(),
+        email,
         password: data.password,
         redirect: false,
       });
 
-      if (result?.error === "EMAIL_NOT_VERIFIED") {
+      const errorText = result?.error?.toString() ?? "";
+      if (errorText.includes("EMAIL_NOT_VERIFIED")) {
         setError("Please verify your email before signing in. Check your inbox for the verification link.");
+        setShowResendLink(true);
         return;
       }
 
@@ -53,6 +65,25 @@ export default function LoginPage() {
       router.refresh();
     });
   });
+
+  const onResendVerification = async () => {
+    if (!lastEmail) {
+      setResendMessage("Enter your email and try logging in again first.");
+      return;
+    }
+    setIsResendPending(true);
+    setResendMessage("");
+
+    try {
+      await resendVerificationEmail(lastEmail);
+      setResendMessage("Verification link resent. Check your inbox.");
+    } catch (err) {
+      console.error(err);
+      setResendMessage("Unable to resend verification email. Please try again later.");
+    } finally {
+      setIsResendPending(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
@@ -129,12 +160,25 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-2 flex items-center justify-between text-sm text-slate-800 dark:text-slate-400">
+          <div className="mt-2 flex flex-col gap-3 text-sm text-slate-800 dark:text-slate-400">
             <Link href="/auth/forgot-password" className="font-medium text-cyan-700 hover:underline dark:text-cyan-400">
               Forgot password?
             </Link>
+            {showResendLink ? (
+              <button
+                type="button"
+                onClick={onResendVerification}
+                disabled={isResendPending}
+                className="text-left font-medium text-cyan-700 hover:underline dark:text-cyan-400 disabled:opacity-60"
+              >
+                {isResendPending ? "Resending…" : "Resend verification email"}
+              </button>
+            ) : null}
+            {resendMessage ? (
+              <p className="text-sm text-slate-700 dark:text-slate-400">{resendMessage}</p>
+            ) : null}
             <p>
-              Don&apos;t have an account?{" "}
+              Don&apos;t have an account? {" "}
               <Link href="/auth/register" className="font-medium text-cyan-700 hover:underline dark:text-cyan-400">
                 Create one
               </Link>
