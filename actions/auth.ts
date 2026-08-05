@@ -152,6 +152,9 @@ export async function resetPassword(token: string, password: string) {
     where: { id: user.id },
     data: {
       passwordHash,
+      emailVerified: true,
+      verificationToken: null,
+      verificationTokenExpiresAt: null,
       passwordResetToken: null,
       passwordResetTokenExpiresAt: null,
     },
