@@ -7,7 +7,7 @@ import { useForm, Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createIssueSchema, priorityValues } from "@/lib/validationSchemas";
+import { createIssueSchema } from "@/lib/validationSchemas";
 import { z } from "zod";
 import { createIssue } from "@/actions/issue";
 import ErrorMessage from "@/components/ErrorMessage";
@@ -142,11 +142,13 @@ const NewIssuePage = () => {
               <Controller
                 name="description"
                 control={control}
-                render={({ field: { ref: _ref, value, ...rest } }) => (
+                render={({ field: { value, onChange, onBlur, name } }) => (
                   <SimpleMDE
                     placeholder="Describe the issue in detail. Markdown is supported."
                     value={value || ""}
-                    {...rest}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    id={name}
                   />
                 )}
               />

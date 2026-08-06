@@ -24,12 +24,24 @@ export const metadata: Metadata = {
   description: "Track, manage, and resolve issues efficiently with Issue Logger.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const session = await auth();
+  let session = null;
+  try {
+    session = await auth();
+  } catch (err: unknown) {
+    const errorObj = err as Record<string, unknown>;
+    if (errorObj?.digest === "DYNAMIC_SERVER_USAGE" || (errorObj?.message as string)?.includes("DYNAMIC_SERVER_USAGE")) {
+      throw err;
+    }
+    console.error("Failed to retrieve auth session in RootLayout:", err);
+  }
+
   const userId = session?.user?.id ? parseInt(session.user.id, 10) : undefined;
 
   let openIssueCount = 0;

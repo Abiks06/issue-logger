@@ -86,22 +86,38 @@ export async function updateIssueStatus(
   const userId = await getCurrentUserId();
   if (userId) {
     const issue = await prisma.issue.findUnique({ where: { id } });
-    if (!issue || issue.userId !== userId) return;
+    if (!issue || issue.userId !== userId) {
+      return { success: false, error: "Not authorised to edit this issue." };
+    }
   }
 
-  await prisma.issue.update({ where: { id }, data: { status } });
-  revalidatePath("/issues");
-  revalidatePath("/");
+  try {
+    await prisma.issue.update({ where: { id }, data: { status } });
+    revalidatePath("/issues");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to update issue status", error);
+    return { success: false, error: "Unable to update issue status." };
+  }
 }
 
 export async function deleteIssue(id: number) {
   const userId = await getCurrentUserId();
   if (userId) {
     const issue = await prisma.issue.findUnique({ where: { id } });
-    if (!issue || issue.userId !== userId) return;
+    if (!issue || issue.userId !== userId) {
+      return { success: false, error: "Not authorised to delete this issue." };
+    }
   }
 
-  await prisma.issue.delete({ where: { id } });
-  revalidatePath("/issues");
-  revalidatePath("/");
+  try {
+    await prisma.issue.delete({ where: { id } });
+    revalidatePath("/issues");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete issue", error);
+    return { success: false, error: "Unable to delete issue." };
+  }
 }

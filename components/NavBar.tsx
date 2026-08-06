@@ -28,6 +28,7 @@ const NavBar = ({ openIssueCount = 0 }: NavBarProps) => {
   const { data: session } = useSession();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

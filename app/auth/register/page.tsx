@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema } from "@/lib/validationSchemas";
 import { z } from "zod";
 import { registerUser } from "@/actions/auth";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FaBug } from "react-icons/fa";

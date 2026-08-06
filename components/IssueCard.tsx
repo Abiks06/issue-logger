@@ -69,14 +69,18 @@ function IssueCard({ issue }: IssueCardProps) {
   const handleStatusChange = (status: "IN_PROGRESS" | "CLOSED" | "OPEN") => {
     setPendingAction(status);
     startTransition(async () => {
-      await updateIssueStatus(issue.id, status);
-      toast.success(
-        status === "IN_PROGRESS"
-          ? "Marked as In Progress"
-          : status === "CLOSED"
-          ? "Issue closed"
-          : "Issue reopened"
-      );
+      const res = await updateIssueStatus(issue.id, status);
+      if (res?.success) {
+        toast.success(
+          status === "IN_PROGRESS"
+            ? "Marked as In Progress"
+            : status === "CLOSED"
+            ? "Issue closed"
+            : "Issue reopened"
+        );
+      } else {
+        toast.error(res?.error || "Failed to update issue status.");
+      }
       setPendingAction(null);
     });
   };
@@ -88,8 +92,12 @@ function IssueCard({ issue }: IssueCardProps) {
     }
     setPendingAction("delete");
     startTransition(async () => {
-      await deleteIssue(issue.id);
-      toast.success("Issue deleted");
+      const res = await deleteIssue(issue.id);
+      if (res?.success) {
+        toast.success("Issue deleted");
+      } else {
+        toast.error(res?.error || "Failed to delete issue.");
+      }
       setPendingAction(null);
     });
   };

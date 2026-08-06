@@ -142,8 +142,8 @@ export default function EditIssueForm({ issue }: EditIssueFormProps) {
               <Controller
                 name="description"
                 control={control}
-                render={({ field: { ref: _ref, value, ...rest } }) => (
-                  <SimpleMDE value={value || ""} {...rest} />
+                render={({ field: { value, onChange, onBlur, name } }) => (
+                  <SimpleMDE value={value || ""} onChange={onChange} onBlur={onBlur} id={name} />
                 )}
               />
               <ErrorMessage>{errors.description?.message}</ErrorMessage>

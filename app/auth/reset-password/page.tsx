@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition, Suspense } from "react";
+import { useState, useTransition, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -15,8 +15,8 @@ type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
 function ResetPasswordFormContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [token, setToken] = useState<string | null>(null);
-  const [message, setMessage] = useState("");
+  const token = searchParams.get("token");
+  const [message, setMessage] = useState(!token ? "Reset token is missing. Request a new password reset link." : "");
   const [isSuccess, setIsSuccess] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -29,18 +29,6 @@ function ResetPasswordFormContent() {
     mode: "onBlur",
     reValidateMode: "onChange",
   });
-
-  useEffect(() => {
-    const tokenParam = searchParams.get("token");
-    if (!tokenParam) {
-      setToken(null);
-      setMessage("Reset token is missing. Request a new password reset link.");
-      setIsSuccess(false);
-      return;
-    }
-
-    setToken(tokenParam);
-  }, [searchParams]);
 
   const onSubmit = handleSubmit((data) => {
     startTransition(async () => {
