@@ -50,11 +50,19 @@ export async function registerUser(data: RegisterData) {
       name: parsed.data.name,
       email: normalizedEmail,
       passwordHash,
-      emailVerified: isDev,
-      verificationToken: isDev ? null : verificationToken,
-      verificationTokenExpiresAt: isDev ? null : new Date(Date.now() + 1000 * 60 * 60 * 24),
+      emailVerified: isDev ? new Date() : null,
     },
   });
+
+  if (!isDev) {
+    await prisma.verificationToken.create({
+      data: {
+        identifier: normalizedEmail,
+        token: verificationToken,
+        expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
+      },
+    });
+  }
 
   void sendMail({
     to: normalizedEmail,
@@ -76,22 +84,29 @@ export async function registerUser(data: RegisterData) {
 }
 
 export async function verifyEmail(token: string) {
-  const user = await prisma.user.findFirst({
-    where: {
-      verificationToken: token,
-      verificationTokenExpiresAt: { gt: new Date() },
-    },
+  const verificationToken = await prisma.verificationToken.findUnique({
+    where: { token },
   });
 
-  if (!user) return { success: false, message: "Invalid or expired verification link." };
+  if (!verificationToken || verificationToken.expires < new Date()) {
+    return { success: false, message: "Invalid or expired verification link." };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: verificationToken.identifier },
+  });
+
+  if (!user) return { success: false, message: "User not found." };
 
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      emailVerified: true,
-      verificationToken: null,
-      verificationTokenExpiresAt: null,
+      emailVerified: new Date(),
     },
+  });
+
+  await prisma.verificationToken.delete({
+    where: { token },
   });
 
   return { success: true, message: "Email verified successfully." };
@@ -104,14 +119,19 @@ export async function resendVerificationEmail(email: string) {
     return { success: true };
   }
 
-  const token = user.verificationToken || createToken();
-  const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
+  // Delete any existing tokens for this email
+  await prisma.verificationToken.deleteMany({
+    where: { identifier: normalizedEmail },
+  });
 
-  await prisma.user.update({
-    where: { id: user.id },
+  const token = createToken();
+  const expires = new Date(Date.now() + 1000 * 60 * 60 * 24);
+
+  await prisma.verificationToken.create({
     data: {
-      verificationToken: token,
-      verificationTokenExpiresAt: expiresAt,
+      identifier: normalizedEmail,
+      token,
+      expires,
     },
   });
 
@@ -186,9 +206,7 @@ export async function resetPassword(token: string, password: string) {
     where: { id: user.id },
     data: {
       passwordHash,
-      emailVerified: true,
-      verificationToken: null,
-      verificationTokenExpiresAt: null,
+      emailVerified: user.emailVerified || new Date(),
       passwordResetToken: null,
       passwordResetTokenExpiresAt: null,
     },
