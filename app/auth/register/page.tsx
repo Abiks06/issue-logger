@@ -42,7 +42,7 @@ export default function RegisterPage() {
         return;
       }
 
-      toast.success("Account created! Please verify your email before signing in.");
+      toast.success(result.message || "Account created! Please verify your email before signing in.");
       router.push("/auth/login");
       router.refresh();
     });

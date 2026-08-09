@@ -25,6 +25,8 @@ export async function sendMail({
   subject: string;
   html: string;
 }) {
+  console.log("Sending email to...", to);
+  
   const from = process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@example.com";
 
   if (resendApiKey) {

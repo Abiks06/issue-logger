@@ -64,10 +64,11 @@ export async function registerUser(data: RegisterData) {
     });
   }
 
-  void sendMail({
-    to: normalizedEmail,
-    subject: "Verify your Issue Logger account",
-    html: `
+  try {
+    await sendMail({
+      to: normalizedEmail,
+      subject: "Verify your Issue Logger account",
+      html: `
         <div style="font-family:Arial,sans-serif;line-height:1.5">
           <h2>Welcome to Issue Logger</h2>
           <p>Hi ${parsed.data.name},</p>
@@ -76,11 +77,13 @@ export async function registerUser(data: RegisterData) {
           <p>If you didn't create this account, you can ignore this email.</p>
         </div>
       `,
-  }).catch((err) => {
-    console.error("Failed to send verification email:", err);
-  });
+    });
+  } catch (error) {
+    console.error("Failed to send verification email:", error);
+    return { success: false, errors: { email: ["Failed to send verification email. Please try again later."] } };
+  }
 
-  return { success: true };
+  return { success: true, message: "Confirmation email sent!" };
 }
 
 export async function verifyEmail(token: string) {
@@ -135,10 +138,11 @@ export async function resendVerificationEmail(email: string) {
     },
   });
 
-  void sendMail({
-    to: normalizedEmail,
-    subject: "Verify your Issue Logger account",
-    html: `
+  try {
+    await sendMail({
+      to: normalizedEmail,
+      subject: "Verify your Issue Logger account",
+      html: `
         <div style="font-family:Arial,sans-serif;line-height:1.5">
           <h2>Verify your email</h2>
           <p>Hi ${user.name},</p>
@@ -147,11 +151,13 @@ export async function resendVerificationEmail(email: string) {
           <p>If you didn't request this, you can ignore this email.</p>
         </div>
       `,
-  }).catch((err) => {
-    console.error("Failed to send verification email:", err);
-  });
+    });
+  } catch (error) {
+    console.error("Failed to send verification email:", error);
+    return { success: false, message: "Failed to send verification email. Please try again later." };
+  }
 
-  return { success: true };
+  return { success: true, message: "Verification email sent!" };
 }
 
 export async function requestPasswordReset(email: string) {
@@ -171,10 +177,11 @@ export async function requestPasswordReset(email: string) {
     },
   });
 
-  void sendMail({
-    to: normalized,
-    subject: "Reset your Issue Logger password",
-    html: `
+  try {
+    await sendMail({
+      to: normalized,
+      subject: "Reset your Issue Logger password",
+      html: `
         <div style="font-family:Arial,sans-serif;line-height:1.5">
           <h2>Reset your password</h2>
           <p>Hi ${user.name},</p>
@@ -183,11 +190,13 @@ export async function requestPasswordReset(email: string) {
           <p>If you didn't request this, you can ignore this email.</p>
         </div>
       `,
-  }).catch((err) => {
-    console.error("Failed to send password reset email:", err);
-  });
+    });
+  } catch (error) {
+    console.error("Failed to send password reset email:", error);
+    return { success: false, message: "Failed to send password reset email. Please try again later." };
+  }
 
-  return { success: true };
+  return { success: true, message: "Password reset email sent!" };
 }
 
 export async function resetPassword(token: string, password: string) {
