@@ -17,7 +17,11 @@ class EmailNotVerifiedError extends CredentialsSignin {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt", maxAge: 7 * 24 * 60 * 60 },
+  session: { 
+    strategy: "jwt", 
+    maxAge: 30 * 60, // 30 minutes idle timeout
+    updateAge: 5 * 60, // Update expiration if active
+  },
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: "/auth/login",

@@ -45,7 +45,7 @@ export async function registerUser(data: RegisterData) {
 
   const isDev = process.env.NODE_ENV !== "production";
 
-  await prisma.user.create({
+  const user = await prisma.user.create({
     data: {
       name: parsed.data.name,
       email: normalizedEmail,
@@ -80,6 +80,11 @@ export async function registerUser(data: RegisterData) {
     });
   } catch (error) {
     console.error("Failed to send verification email:", error);
+    // Rollback user creation
+    await prisma.user.delete({ where: { id: user.id } }).catch(console.error);
+    if (!isDev) {
+      await prisma.verificationToken.delete({ where: { token: verificationToken } }).catch(console.error);
+    }
     return { success: false, errors: { email: ["Failed to send verification email. Please try again later."] } };
   }
 
