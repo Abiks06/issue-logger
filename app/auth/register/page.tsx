@@ -10,7 +10,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FaBug } from "react-icons/fa";
 import ErrorMessage from "@/components/ErrorMessage";
-import toast from "react-hot-toast";
 
 type RegisterForm = z.infer<typeof registerSchema>;
 

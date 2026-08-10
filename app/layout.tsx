@@ -24,7 +24,6 @@ export const metadata: Metadata = {
   description: "Track, manage, and resolve issues efficiently with Issue Logger.",
 };
 
-export const dynamic = "force-dynamic";
 
 export default async function RootLayout({
   children,

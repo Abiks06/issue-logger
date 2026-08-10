@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import type { Metadata } from "next";
 import type { Issue } from "@prisma/client";
 import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -137,7 +138,8 @@ function DonutChart({
 
 export default async function HomePage() {
   const session = await auth();
-  const userId = session?.user?.id ? parseInt(session.user.id, 10) : -1;
+  if (!session?.user?.id) redirect("/auth/login");
+  const userId = parseInt(session.user.id, 10);
 
   let issues: Issue[] = [];
   let totalIssues = 0, openIssues = 0, inProgressIssues = 0, closedIssues = 0;

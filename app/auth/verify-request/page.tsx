@@ -21,7 +21,7 @@ export default function VerifyRequestPage() {
           </h1>
           
           <p className="mb-8 text-slate-600 dark:text-slate-400 leading-relaxed">
-            We've sent a verification link to your email address. Please click the link to verify your account before signing in.
+            We&apos;ve sent a verification link to your email address. Please click the link to verify your account before signing in.
           </p>
 
           <Link

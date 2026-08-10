@@ -20,6 +20,8 @@ async function getCurrentUserId(): Promise<number | null> {
 
 export async function createIssue(data: IssueFormData) {
   const userId = await getCurrentUserId();
+  if (!userId) return { success: false, error: "Not authenticated." };
+
   const validation = createIssueSchema.safeParse(data);
   if (!validation.success) {
     const { fieldErrors } = validation.error.flatten();
@@ -47,6 +49,8 @@ export async function createIssue(data: IssueFormData) {
 
 export async function updateIssue(id: number, data: EditIssueFormData) {
   const userId = await getCurrentUserId();
+  if (!userId) return { success: false, error: "Not authenticated." };
+
   const validation = editIssueSchema.safeParse(data);
   if (!validation.success) {
     const { fieldErrors } = validation.error.flatten();
@@ -54,11 +58,9 @@ export async function updateIssue(id: number, data: EditIssueFormData) {
   }
 
   // Verify ownership
-  if (userId) {
-    const issue = await prisma.issue.findUnique({ where: { id } });
-    if (!issue || issue.userId !== userId) {
-      return { success: false, error: "Not authorised to edit this issue." };
-    }
+  const issue = await prisma.issue.findUnique({ where: { id } });
+  if (!issue || issue.userId !== userId) {
+    return { success: false, error: "Not authorised to edit this issue." };
   }
 
   try {
@@ -84,11 +86,11 @@ export async function updateIssueStatus(
   status: "IN_PROGRESS" | "CLOSED" | "OPEN" = "IN_PROGRESS"
 ) {
   const userId = await getCurrentUserId();
-  if (userId) {
-    const issue = await prisma.issue.findUnique({ where: { id } });
-    if (!issue || issue.userId !== userId) {
-      return { success: false, error: "Not authorised to edit this issue." };
-    }
+  if (!userId) return { success: false, error: "Not authenticated." };
+
+  const issue = await prisma.issue.findUnique({ where: { id } });
+  if (!issue || issue.userId !== userId) {
+    return { success: false, error: "Not authorised to edit this issue." };
   }
 
   try {
@@ -104,11 +106,11 @@ export async function updateIssueStatus(
 
 export async function deleteIssue(id: number) {
   const userId = await getCurrentUserId();
-  if (userId) {
-    const issue = await prisma.issue.findUnique({ where: { id } });
-    if (!issue || issue.userId !== userId) {
-      return { success: false, error: "Not authorised to delete this issue." };
-    }
+  if (!userId) return { success: false, error: "Not authenticated." };
+
+  const issue = await prisma.issue.findUnique({ where: { id } });
+  if (!issue || issue.userId !== userId) {
+    return { success: false, error: "Not authorised to delete this issue." };
   }
 
   try {

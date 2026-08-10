@@ -4,12 +4,14 @@ import IssueSearch from "@/components/IssueSearch";
 import type { Metadata } from "next";
 import type { Issue } from "@prisma/client";
 import { auth } from "@/auth";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = { title: "Issues" };
 
 export default async function IssuesPage() {
   const session = await auth();
-  const userId = session?.user?.id ? parseInt(session.user.id, 10) : -1;
+  if (!session?.user?.id) redirect("/auth/login");
+  const userId = parseInt(session.user.id, 10);
 
   let issues: Issue[] = [];
 

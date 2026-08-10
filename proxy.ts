@@ -1,14 +1,14 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-export default auth((req) => {
+export const proxy = auth((req) => {
   const { nextUrl, auth: session } = req;
   const isLoggedIn = !!session?.user;
 
   const isAuthRoute = nextUrl.pathname.startsWith("/auth");
   const isApiAuth = nextUrl.pathname.startsWith("/api/auth");
 
-  // Always allow NextAuth API + auth pages
+  // Always allow NextAuth API routes
   if (isApiAuth) return NextResponse.next();
 
   // Redirect authenticated users away from login/register

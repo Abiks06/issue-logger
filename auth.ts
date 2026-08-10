@@ -17,7 +17,7 @@ class EmailNotVerifiedError extends CredentialsSignin {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 7 * 24 * 60 * 60 },
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: "/auth/login",
@@ -81,6 +81,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     session({ session, token }) {
       if (token.id) session.user.id = token.id as string;
       return session;
+    },
+    authorized({ auth: session, request: { nextUrl } }) {
+      const isLoggedIn = !!session?.user;
+      const isAuthRoute = nextUrl.pathname.startsWith("/auth");
+      if (!isAuthRoute && !isLoggedIn) return false;
+      return true;
     },
   },
 });
