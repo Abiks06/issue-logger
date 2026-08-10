@@ -31,20 +31,24 @@ export default function RegisterPage() {
 
   const onSubmit = handleSubmit((data) => {
     startTransition(async () => {
-      setError("");
-      const result = await registerUser(data);
+      try {
+        setError("");
+        const result = await registerUser(data);
 
-      if (!result.success) {
-        const msg = result.errors
-          ? Object.values(result.errors).flat().join(" ")
-          : "Registration failed.";
-        setError(msg);
-        return;
+        if (!result.success) {
+          const msg = result.errors
+            ? Object.values(result.errors).flat().join(" ")
+            : "Registration failed.";
+          setError(msg);
+          return;
+        }
+
+        router.push("/auth/verify-request");
+        router.refresh();
+      } catch (err) {
+        console.error("Registration error:", err);
+        setError("An unexpected error occurred while creating your account. Please try again.");
       }
-
-      toast.success(result.message || "Account created! Please verify your email before signing in.");
-      router.push("/auth/login");
-      router.refresh();
     });
   });
 
