@@ -114,7 +114,7 @@ function IssueCard({ issue }: IssueCardProps) {
           >
             #{issue.id}
           </button>
-          <h2 className="text-sm font-semibold leading-snug text-slate-900 sm:text-base dark:text-slate-100 break-words">
+          <h2 className="text-sm font-semibold leading-snug text-slate-900 sm:text-base dark:text-slate-100 wrap-break-word">
             {issue.title}
           </h2>
         </div>
