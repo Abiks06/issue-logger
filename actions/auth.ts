@@ -54,7 +54,7 @@ export async function registerUser(data: RegisterData) {
     },
   });
 
-  if (!isDev) {
+  if (!user.emailVerified) {
     await prisma.verificationToken.create({
       data: {
         identifier: normalizedEmail,
@@ -78,14 +78,30 @@ export async function registerUser(data: RegisterData) {
         </div>
       `,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to send verification email:", error);
     // Rollback user creation
     await prisma.user.delete({ where: { id: user.id } }).catch(console.error);
-    if (!isDev) {
+    if (!user.emailVerified) {
       await prisma.verificationToken.delete({ where: { token: verificationToken } }).catch(console.error);
     }
-    return { success: false, errors: { email: ["Failed to send verification email. Please try again later."] } };
+    const errMsg = error?.message || "";
+    if (errMsg.includes("403") || errMsg.includes("testing mode") || errMsg.includes("only send to your own")) {
+      return {
+        success: false,
+        errors: {
+          email: [
+            "Resend free tier only permits sending emails to your account owner email address. Please switch to Gmail SMTP or Brevo in Vercel environment variables.",
+          ],
+        },
+      };
+    }
+    return {
+      success: false,
+      errors: {
+        email: ["Failed to send verification email. Please check your SMTP / Resend environment configuration."],
+      },
+    };
   }
 
   return { success: true, message: "Confirmation email sent!" };

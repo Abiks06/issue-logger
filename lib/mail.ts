@@ -1,16 +1,19 @@
 import nodemailer from "nodemailer";
 
 const resendApiKey =
-  process.env.RESEND_API_KEY ||
-  (process.env.SMTP_HOST === "smtp.resend.com" ? process.env.SMTP_PASS : undefined);
+  process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim() !== ""
+    ? process.env.RESEND_API_KEY
+    : process.env.SMTP_HOST === "smtp.resend.com"
+    ? process.env.SMTP_PASS
+    : undefined;
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: Number(process.env.SMTP_PORT || 587),
-  secure: false,
-  connectionTimeout: 5000,
-  greetingTimeout: 5000,
-  socketTimeout: 5000,
+  secure: Number(process.env.SMTP_PORT) === 465,
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
   auth: process.env.SMTP_USER
     ? {
         user: process.env.SMTP_USER,

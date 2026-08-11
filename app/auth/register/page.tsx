@@ -24,31 +24,30 @@ export default function RegisterPage() {
     reValidateMode: "onChange",
   });
 
-  const router = useRouter();
   const [error, setError] = useState("");
-  const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const onSubmit = handleSubmit((data) => {
-    startTransition(async () => {
-      try {
-        setError("");
-        const result = await registerUser(data);
+  const onSubmit = handleSubmit(async (data) => {
+    try {
+      setError("");
+      setIsSubmitting(true);
+      const result = await registerUser(data);
 
-        if (!result.success) {
-          const msg = result.errors
-            ? Object.values(result.errors).flat().join(" ")
-            : "Registration failed.";
-          setError(msg);
-          return;
-        }
-
-        router.push("/auth/verify-request");
-        router.refresh();
-      } catch (err) {
-        console.error("Registration error:", err);
-        setError("An unexpected error occurred while creating your account. Please try again.");
+      if (!result.success) {
+        setIsSubmitting(false);
+        const msg = result.errors
+          ? Object.values(result.errors).flat().join(" ")
+          : "Registration failed.";
+        setError(msg);
+        return;
       }
-    });
+
+      window.location.href = `/auth/verify-request?email=${encodeURIComponent(data.email)}`;
+    } catch (err) {
+      setIsSubmitting(false);
+      console.error("Registration error:", err);
+      setError("An unexpected error occurred while creating your account. Please try again.");
+    }
   });
 
   return (
@@ -151,10 +150,10 @@ export default function RegisterPage() {
             <button
               id="register-submit-btn"
               type="submit"
-              disabled={isPending}
-              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-cyan-500/20 transition-all hover:brightness-110 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2"
+              disabled={isSubmitting}
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-cyan-500/20 transition-all hover:brightness-110 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 cursor-pointer disabled:cursor-not-allowed"
             >
-              {isPending ? "Creating account…" : "Create account"}
+              {isSubmitting ? "Creating account…" : "Create account"}
             </button>
           </form>
 
