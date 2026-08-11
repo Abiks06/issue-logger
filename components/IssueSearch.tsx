@@ -73,7 +73,7 @@ export default function IssueSearch({ initialIssues }: IssueSearchProps) {
   return (
     <>
       {/* Status filter tabs */}
-      <div className="card-shadow flex flex-wrap items-center gap-1 rounded-2xl border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900">
+      <div className="card-shadow flex items-center gap-1.5 overflow-x-auto no-scrollbar rounded-2xl border border-slate-200 bg-white p-1.5 dark:border-slate-800 dark:bg-slate-900 sm:p-2">
         {STATUS_TABS.map((tab) => {
           const isActive = statusFilter === tab.key;
           return (
@@ -81,7 +81,7 @@ export default function IssueSearch({ initialIssues }: IssueSearchProps) {
               key={tab.key}
               id={`filter-tab-${tab.key.toLowerCase()}`}
               onClick={() => setStatusFilter(tab.key)}
-              className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-all ${
+              className={`flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-medium transition-all sm:text-sm cursor-pointer ${
                 isActive
                   ? "bg-linear-to-r from-cyan-600 to-blue-600 text-white shadow-sm shadow-cyan-500/20 dark:from-cyan-500 dark:to-blue-500 dark:text-slate-950"
                   : "text-slate-700 hover:text-slate-900 hover:bg-slate-50 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800"
@@ -103,7 +103,7 @@ export default function IssueSearch({ initialIssues }: IssueSearchProps) {
       </div>
 
       {/* Search + Sort row */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative flex-1">
           <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
@@ -116,20 +116,20 @@ export default function IssueSearch({ initialIssues }: IssueSearchProps) {
             placeholder="Search issues by title or description…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:shadow-none dark:placeholder:text-slate-500 dark:focus:border-cyan-500"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-4 text-xs sm:text-sm text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,0.04)] placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:shadow-none dark:placeholder:text-slate-500 dark:focus:border-cyan-500"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-1.5">
-            <label htmlFor="priority-select" className="text-xs font-medium text-slate-700 dark:text-slate-400 whitespace-nowrap">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5">
+            <label htmlFor="priority-select" className="text-[11px] font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap sm:text-xs">
               Priority
             </label>
             <select
               id="priority-select"
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value as PriorityFilter)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:shadow-none"
+              className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:shadow-none sm:text-sm sm:px-3 sm:py-2.5 cursor-pointer"
             >
               <option value="ALL">All Priorities</option>
               <option value="LOW">Low</option>
@@ -139,15 +139,15 @@ export default function IssueSearch({ initialIssues }: IssueSearchProps) {
             </select>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <label htmlFor="sort-select" className="text-xs font-medium text-slate-700 dark:text-slate-400 whitespace-nowrap">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-1.5">
+            <label htmlFor="sort-select" className="text-[11px] font-medium text-slate-600 dark:text-slate-400 whitespace-nowrap sm:text-xs">
               Sort by
             </label>
             <select
               id="sort-select"
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value as SortKey)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:shadow-none"
+              className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)] focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:shadow-none sm:text-sm sm:px-3 sm:py-2.5 cursor-pointer"
             >
               <option value="newest">Newest first</option>
               <option value="oldest">Oldest first</option>

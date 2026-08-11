@@ -298,3 +298,27 @@ html:not(.dark) .border-slate-200\/70 {
     transparent
   );
 }
+
+/* ─── Scrollbar hiding for touch-scroll tabs ─────────────────── */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ─── Responsive EasyMDE toolbar ────────────────────────────── */
+@media (max-width: 640px) {
+  .EasyMDEContainer .editor-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    padding: 4px;
+    gap: 2px;
+  }
+  .EasyMDEContainer .editor-toolbar button {
+    width: 32px;
+    height: 32px;
+  }
+}
+

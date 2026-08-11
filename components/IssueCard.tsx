@@ -103,36 +103,36 @@ function IssueCard({ issue }: IssueCardProps) {
   };
 
   return (
-    <div className="group card-shadow rounded-2xl border border-slate-200/80 bg-white p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgba(15,23,42,0.05),0_14px_34px_-10px_rgba(15,23,42,0.16)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none dark:hover:shadow-none">
+    <div className="group card-shadow rounded-2xl border border-slate-200/80 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 sm:p-5 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="flex items-start gap-2 min-w-0">
           <button
             onClick={copyIssueId}
             title="Click to copy issue reference"
-            className="rounded-md border border-slate-100 bg-slate-50 px-2 py-0.5 text-xs font-mono font-medium text-slate-700 transition-colors hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-600 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:border-cyan-500 dark:hover:bg-cyan-950/30 dark:hover:text-cyan-400"
+            className="mt-0.5 shrink-0 rounded-md border border-slate-100 bg-slate-50 px-2 py-0.5 text-xs font-mono font-medium text-slate-700 transition-colors hover:border-cyan-200 hover:bg-cyan-50 hover:text-cyan-600 dark:border-slate-800 dark:bg-slate-800/60 dark:text-slate-400 dark:hover:border-cyan-500 dark:hover:bg-cyan-950/30 dark:hover:text-cyan-400 cursor-pointer"
           >
             #{issue.id}
           </button>
-          <h2 className="text-base font-semibold text-slate-900 leading-snug dark:text-slate-100">
+          <h2 className="text-sm font-semibold leading-snug text-slate-900 sm:text-base dark:text-slate-100 break-words">
             {issue.title}
           </h2>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 self-start sm:self-auto">
           <PriorityBadge priority={issue.priority} />
           <StatusBadge status={issue.status} />
         </div>
       </div>
 
       {/* Description */}
-      <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-4 dark:border-slate-800/50 dark:bg-slate-800/30">
-        <div className="prose prose-slate max-w-none text-sm leading-6 text-slate-800 dark:prose-invert dark:text-slate-300">
+      <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 sm:p-4 dark:border-slate-800/50 dark:bg-slate-800/30">
+        <div className="prose prose-slate max-w-none text-xs leading-5 text-slate-800 sm:text-sm sm:leading-6 dark:prose-invert dark:text-slate-300">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayDescription}</ReactMarkdown>
         </div>
         {isLongDescription && (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="mt-2 text-xs font-medium text-cyan-600 hover:underline dark:text-cyan-400"
+            className="mt-2 text-xs font-medium text-cyan-600 hover:underline dark:text-cyan-400 cursor-pointer"
           >
             {expanded ? "Show less ↑" : "Show full description ↓"}
           </button>
@@ -140,8 +140,8 @@ function IssueCard({ issue }: IssueCardProps) {
       </div>
 
       {/* Footer */}
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <span suppressHydrationWarning className="text-xs text-slate-600 dark:text-slate-500">
+      <div className="mt-3.5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <span suppressHydrationWarning className="text-[11px] text-slate-500 dark:text-slate-400 sm:text-xs">
           Created{" "}
           {new Date(issue.createdAt).toLocaleDateString("en-US", {
             month: "short",
@@ -150,11 +150,11 @@ function IssueCard({ issue }: IssueCardProps) {
           })}
         </span>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {/* Edit link */}
           <Link
             href={`/issues/${issue.id}/edit`}
-            className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-800 transition-colors hover:border-slate-300 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+            className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-800 transition-colors hover:border-slate-300 hover:bg-slate-100 sm:px-3 sm:py-1.5 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             Edit
           </Link>
@@ -164,7 +164,7 @@ function IssueCard({ issue }: IssueCardProps) {
             <button
               disabled={isPending}
               onClick={() => handleStatusChange("IN_PROGRESS")}
-              className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400 dark:hover:bg-amber-950/50"
+              className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50 sm:px-3 sm:py-1.5 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400 dark:hover:bg-amber-950/50 cursor-pointer"
             >
               {pendingAction === "IN_PROGRESS" ? "Updating…" : "Mark In Progress"}
             </button>
@@ -174,7 +174,7 @@ function IssueCard({ issue }: IssueCardProps) {
             <button
               disabled={isPending}
               onClick={() => handleStatusChange("CLOSED")}
-              className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
+              className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50 sm:px-3 sm:py-1.5 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400 dark:hover:bg-emerald-950/50 cursor-pointer"
             >
               {pendingAction === "CLOSED" ? "Closing…" : "Close"}
             </button>
@@ -184,7 +184,7 @@ function IssueCard({ issue }: IssueCardProps) {
             <button
               disabled={isPending}
               onClick={() => handleStatusChange("OPEN")}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-800 transition-colors hover:bg-slate-100 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+              className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-800 transition-colors hover:bg-slate-100 disabled:opacity-50 sm:px-3 sm:py-1.5 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 cursor-pointer"
             >
               {pendingAction === "OPEN" ? "Reopening…" : "Reopen"}
             </button>
@@ -199,13 +199,13 @@ function IssueCard({ issue }: IssueCardProps) {
               <button
                 disabled={isPending}
                 onClick={handleDelete}
-                className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-400"
+                className="rounded-lg border border-rose-300 bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-50 sm:px-3 sm:py-1.5 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-400 cursor-pointer"
               >
                 {pendingAction === "delete" ? "Deleting…" : "Yes, Delete"}
               </button>
               <button
                 onClick={() => setConfirmDelete(false)}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400"
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-800 transition-colors hover:bg-slate-50 sm:px-3 sm:py-1.5 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400 cursor-pointer"
               >
                 Cancel
               </button>
@@ -214,7 +214,7 @@ function IssueCard({ issue }: IssueCardProps) {
             <button
               disabled={isPending}
               onClick={handleDelete}
-              className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-100 disabled:opacity-50 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-400 dark:hover:bg-rose-950/40"
+              className="rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-100 disabled:opacity-50 sm:px-3 sm:py-1.5 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-400 dark:hover:bg-rose-950/40 cursor-pointer"
             >
               Delete
             </button>

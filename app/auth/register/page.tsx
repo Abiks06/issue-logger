@@ -51,7 +51,7 @@ export default function RegisterPage() {
   });
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12">
+    <div className="flex min-h-screen items-center justify-center px-3 py-6 sm:px-4 sm:py-12">
       {/* Glow backdrop */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-20 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-linear-to-br from-cyan-400/20 to-blue-500/10 blur-3xl" />
@@ -60,22 +60,22 @@ export default function RegisterPage() {
 
       <div className="relative w-full max-w-md">
         {/* Logo */}
-        <div className="mb-8 flex flex-col items-center gap-3">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-linear-to-br from-cyan-500 to-blue-600 shadow-lg shadow-cyan-500/25 text-white">
-            <FaBug className="text-xl" />
+        <div className="mb-6 flex flex-col items-center gap-2.5 sm:mb-8 sm:gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-linear-to-br from-cyan-500 to-blue-600 shadow-lg shadow-cyan-500/25 text-white sm:h-12 sm:w-12">
+            <FaBug className="text-lg sm:text-xl" />
           </span>
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl dark:text-slate-50">
               Create your account
             </h1>
-            <p className="mt-1 text-sm text-slate-700 dark:text-slate-400">
+            <p className="mt-1 text-xs text-slate-700 sm:text-sm dark:text-slate-400">
               Start tracking your issues in under a minute.
             </p>
           </div>
         </div>
 
         {/* Card */}
-        <div className="card-shadow-lg rounded-2xl border border-slate-200/80 bg-[#fcfbf8] p-8 dark:border-slate-800 dark:bg-slate-900">
+        <div className="card-shadow-lg rounded-2xl border border-slate-200/80 bg-[#fcfbf8] p-5 sm:p-8 dark:border-slate-800 dark:bg-slate-900">
           {error && (
             <div className="mb-5 flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400">
               <span>⚠</span> {error}
