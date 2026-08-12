@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Callout, Spinner } from "@radix-ui/themes";
 import "easymde/dist/easymde.min.css";
 import { useForm, Controller } from "react-hook-form";
 import { useRouter } from "next/navigation";
@@ -14,22 +13,34 @@ import ErrorMessage from "@/components/ErrorMessage";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import type { Issue } from "@prisma/client";
+import { motion } from "framer-motion";
+import Spinner from "@/components/SpinnerAnim";
+import { AlertCircle, ArrowDown, Diamond, ArrowUp, ChevronsUp } from "lucide-react";
 
 const SimpleMDE = dynamic(() => import("react-simplemde-editor"), {
   ssr: false,
   loading: () => (
-    <div className="h-56 w-full animate-pulse rounded-xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800" />
+    <div className="h-56 w-full animate-pulse rounded-xl border border-slate-200/80 bg-slate-100/60 dark:border-slate-700/80 dark:bg-slate-800/60" />
   ),
 });
 
 type EditForm = z.infer<typeof editIssueSchema>;
 
-const PRIORITY_OPTIONS: { value: EditForm["priority"]; label: string; colour: string }[] = [
-  { value: "LOW", label: "Low", colour: "text-sky-700 dark:text-sky-400" },
-  { value: "MEDIUM", label: "Medium", colour: "text-amber-700 dark:text-amber-400" },
-  { value: "HIGH", label: "High", colour: "text-orange-700 dark:text-orange-400" },
-  { value: "CRITICAL", label: "Critical", colour: "text-rose-700 dark:text-rose-400" },
+const PRIORITY_OPTIONS: { value: EditForm["priority"]; label: string; colour: string; icon: React.ReactNode }[] = [
+  { value: "LOW", label: "Low", colour: "text-sky-600 dark:text-sky-400", icon: <ArrowDown className="h-3.5 w-3.5" /> },
+  { value: "MEDIUM", label: "Medium", colour: "text-amber-600 dark:text-amber-400", icon: <Diamond className="h-3.5 w-3.5" /> },
+  { value: "HIGH", label: "High", colour: "text-orange-600 dark:text-orange-400", icon: <ArrowUp className="h-3.5 w-3.5" /> },
+  { value: "CRITICAL", label: "Critical", colour: "text-rose-600 dark:text-rose-400", icon: <ChevronsUp className="h-3.5 w-3.5" /> },
 ];
+
+const container = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.05 } },
+};
+const itemVariant = {
+  hidden: { opacity: 0, y: 12 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as const } },
+};
 
 interface EditIssueFormProps {
   issue: Issue;
@@ -74,18 +85,23 @@ export default function EditIssueForm({ issue }: EditIssueFormProps) {
   });
 
   return (
-    <div className="min-h-screen px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
+    <motion.div
+      className="min-h-screen px-3 py-5 sm:px-6 sm:py-8 lg:px-8"
+      variants={container}
+      initial="hidden"
+      animate="visible"
+    >
       <div className="mx-auto w-full max-w-2xl">
         {/* Breadcrumb */}
-        <nav className="mb-4 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-          <Link href="/" className="hover:text-slate-700 dark:hover:text-slate-200">Dashboard</Link>
-          <span>›</span>
-          <Link href="/issues" className="hover:text-slate-700 dark:hover:text-slate-200">Issues</Link>
-          <span>›</span>
+        <motion.nav variants={itemVariant} className="mb-4 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+          <Link href="/" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Dashboard</Link>
+          <span className="text-slate-300 dark:text-slate-600">›</span>
+          <Link href="/issues" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Issues</Link>
+          <span className="text-slate-300 dark:text-slate-600">›</span>
           <span className="text-slate-700 dark:text-slate-200">Edit #{issue.id}</span>
-        </nav>
+        </motion.nav>
 
-        <div className="card-shadow-lg rounded-2xl border border-slate-200 bg-white p-4.5 sm:p-8 dark:border-slate-800 dark:bg-slate-900">
+        <motion.div variants={itemVariant} className="glass-card rounded-2xl p-4.5 sm:p-8">
           <div className="mb-5 sm:mb-6">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-cyan-600 dark:text-cyan-400 sm:text-xs">
               Editing Issue #{issue.id}
@@ -99,43 +115,49 @@ export default function EditIssueForm({ issue }: EditIssueFormProps) {
           </div>
 
           {error && (
-            <Callout.Root variant="surface" size="2" color="red" highContrast className="mb-5 w-full">
-              <Callout.Text>{error}</Callout.Text>
-            </Callout.Root>
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-5 flex items-center gap-2 rounded-xl border border-rose-200/80 bg-rose-50/80 px-4 py-3 text-sm font-medium text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400"
+            >
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {error}
+            </motion.div>
           )}
 
           <form className="flex w-full flex-col gap-4 sm:gap-5" onSubmit={onSubmit}>
             {/* Title */}
-            <div className="flex flex-col gap-1.5">
+            <motion.div variants={itemVariant} className="flex flex-col gap-1.5">
               <label htmlFor="edit-issue-title" className="text-xs font-medium text-slate-700 dark:text-slate-300 sm:text-sm">
                 Title <span className="text-rose-500">*</span>
               </label>
               <input
                 id="edit-issue-title"
-                className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 sm:px-4 sm:py-2.5 sm:text-sm"
+                className="w-full rounded-xl border border-slate-200/80 bg-white px-3.5 py-2 text-xs text-slate-900 placeholder:text-slate-400 focus-ring dark:border-slate-700/80 dark:bg-slate-800/80 dark:text-slate-100 sm:px-4 sm:py-2.5 sm:text-sm"
                 {...register("title")}
               />
               <ErrorMessage>{errors.title?.message}</ErrorMessage>
-            </div>
+            </motion.div>
 
             {/* Priority */}
-            <div className="flex flex-col gap-1.5">
+            <motion.div variants={itemVariant} className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300 sm:text-sm">Priority</label>
               <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
                 {PRIORITY_OPTIONS.map((opt) => (
                   <label key={opt.value} className="cursor-pointer">
                     <input type="radio" value={opt.value} className="peer sr-only" {...register("priority")} />
-                    <span className={`peer-checked:ring-2 peer-checked:ring-offset-1 flex items-center justify-center rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-medium transition-all hover:bg-slate-100 peer-checked:border-cyan-400 peer-checked:bg-cyan-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:peer-checked:border-cyan-500 dark:peer-checked:bg-cyan-950/30 sm:px-4 sm:text-sm ${opt.colour}`}>
+                    <span className={`peer-checked:ring-2 peer-checked:ring-cyan-400/50 peer-checked:ring-offset-1 flex items-center justify-center gap-1.5 rounded-xl border border-slate-200/80 bg-white px-3.5 py-2 text-xs font-medium transition-all hover:bg-slate-50 peer-checked:border-cyan-400 peer-checked:bg-cyan-50 dark:border-slate-700/80 dark:bg-slate-800/80 dark:hover:bg-slate-700 dark:peer-checked:border-cyan-500 dark:peer-checked:bg-cyan-950/30 sm:px-4 sm:text-sm ${opt.colour}`}>
+                      {opt.icon}
                       {opt.label}
                     </span>
                   </label>
                 ))}
               </div>
               <ErrorMessage>{errors.priority?.message}</ErrorMessage>
-            </div>
+            </motion.div>
 
             {/* Description */}
-            <div className="flex flex-col gap-1.5">
+            <motion.div variants={itemVariant} className="flex flex-col gap-1.5">
               <label className="text-xs font-medium text-slate-700 dark:text-slate-300 sm:text-sm">
                 Description <span className="text-rose-500">*</span>
               </label>
@@ -147,35 +169,37 @@ export default function EditIssueForm({ issue }: EditIssueFormProps) {
                 )}
               />
               <ErrorMessage>{errors.description?.message}</ErrorMessage>
-            </div>
+            </motion.div>
 
             {/* Actions */}
-            <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center sm:gap-3">
-              <button
+            <motion.div variants={itemVariant} className="flex flex-col gap-2 pt-1 sm:flex-row sm:items-center sm:gap-3">
+              <motion.button
                 id="update-issue-btn"
                 type="submit"
                 disabled={isPending}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-cyan-500 to-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-cyan-500/20 transition-all hover:brightness-110 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 sm:w-auto cursor-pointer"
+                className="btn-primary inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold shadow-md shadow-cyan-500/20 disabled:opacity-60 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 sm:w-auto cursor-pointer"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
                 {isPending ? (
                   <>
-                    <Spinner size="2" />
+                    <Spinner size="sm" />
                     Saving…
                   </>
                 ) : (
                   "Save Changes"
                 )}
-              </button>
+              </motion.button>
               <Link
                 href="/issues"
-                className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 sm:w-auto text-center"
+                className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200/80 bg-white px-5 py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700/80 dark:bg-slate-800/80 dark:text-slate-300 dark:hover:bg-slate-700 sm:w-auto text-center"
               >
                 Cancel
               </Link>
-            </div>
+            </motion.div>
           </form>
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 }

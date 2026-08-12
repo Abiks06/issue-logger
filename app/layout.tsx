@@ -1,19 +1,18 @@
-import "@radix-ui/themes/styles.css";
 import type { Metadata } from "next";
-import { Maven_Pro } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import NavBar from "@/components/NavBar";
 import Footer from "@/components/Footer";
 import { Toaster } from "react-hot-toast";
-import { Theme } from "@radix-ui/themes";
 import { ThemeProvider } from "next-themes";
 import { SessionProvider } from "next-auth/react";
 import { prisma } from "@/lib/db";
 import { auth } from "@/auth";
 
-const mavenPro = Maven_Pro({
-  variable: "--font-maven-pro",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -55,29 +54,25 @@ export default async function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`min-h-full flex flex-col bg-background text-foreground ${mavenPro.className}`}>
+      <body className={`min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)] ${inter.className}`}>
         <SessionProvider>
           <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <Theme
-              appearance="inherit"
-              accentColor="cyan"
-              grayColor="slate"
-              radius="large"
-            >
-              <NavBar openIssueCount={openIssueCount} />
-              <main className="flex-1">{children}</main>
-              <Footer />
-              <Toaster
-                position="bottom-right"
-                toastOptions={{
-                  className: "font-medium text-sm",
-                  style: {
-                    borderRadius: "0.75rem",
-                    border: "1px solid rgba(148,163,184,0.2)",
-                  },
-                }}
-              />
-            </Theme>
+            <NavBar openIssueCount={openIssueCount} />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <Toaster
+              position="bottom-right"
+              toastOptions={{
+                className: "font-medium text-sm",
+                style: {
+                  borderRadius: "0.875rem",
+                  border: "1px solid rgba(148,163,184,0.15)",
+                  background: "var(--card)",
+                  color: "var(--foreground)",
+                  boxShadow: "0 8px 24px -8px rgba(15,23,42,0.12)",
+                },
+              }}
+            />
           </ThemeProvider>
         </SessionProvider>
       </body>
