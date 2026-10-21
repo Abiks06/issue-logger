@@ -1,61 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Issue Logger
 
-## Getting Started
+A full-stack issue tracker for logging, prioritising and closing out bugs and server issues. Accounts are email-verified, sessions expire when idle, and every route except sign-in is protected.
 
-First, run the development server:
+**[Live demo](https://issue-logger-beta.vercel.app)**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Issue lifecycle:** create, edit and delete issues; move them through Open → In progress → Closed
+- **Priorities:** Low, Medium, High and Critical, with search across issues
+- **Markdown descriptions:** written in a Markdown editor and rendered with GitHub-flavoured Markdown
+- **Authentication:** email and password sign-up with email verification, password reset by email, bcrypt-hashed passwords, and JWT sessions with a 30-minute idle timeout
+- **Route protection:** a Next.js proxy sends signed-out visitors to the login page and keeps signed-in users out of the auth pages
+- **Validation:** forms validated with Zod schemas on both client and server
+- **Polish:** dashboard counters, page transitions with Framer Motion, and light and dark themes
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Tech stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-## Environment variables
+| Layer | Tools |
+| :-- | :-- |
+| Framework | Next.js (App Router, Server Actions), React, TypeScript |
+| Data | PostgreSQL, Prisma ORM |
+| Auth | Auth.js (NextAuth v5) credentials provider, bcrypt |
+| Forms | React Hook Form, Zod |
+| Email | Nodemailer (SMTP) |
+| UI | Tailwind CSS, Framer Motion, Lucide icons, next-themes |
 
-This app requires the following environment variables in production (for Vercel, add them in the project dashboard):
+## Data model
 
-- `DATABASE_URL`
-- `NEXTAUTH_SECRET`
-- `NEXTAUTH_URL`
-- `NEXT_PUBLIC_APP_URL`
-- `SMTP_HOST`
-- `SMTP_PORT`
-- `SMTP_USER`
-- `SMTP_PASS`
-- `SMTP_FROM`
-- `CLEAR_DB_SECRET`
+`User` owns many `Issue`s. Each issue has a title, Markdown description, `status` (`OPEN`, `IN_PROGRESS`, `CLOSED`) and `priority` (`LOW` to `CRITICAL`). Verification and password-reset tokens expire automatically.
 
-> The `.env` file is local only and is not automatically used by Vercel.
+## Running locally
 
-## Clearing your deployed Aiven database
+1. Install dependencies (this also generates the Prisma client):
 
-If you need to clear the deployed database, add `CLEAR_DB_SECRET` to Vercel and then call the admin endpoint:
+   ```bash
+   npm install
+   ```
 
-```bash
-curl -X POST https://<your-deployment>/api/admin/clear-db -H "x-clear-db-secret: <CLEAR_DB_SECRET>"
-```
+2. Create `.env.local` with:
 
-This will delete all `User` and `Issue` records.
-## Learn More
+   ```bash
+   DATABASE_URL=postgresql://...
+   DIRECT_URL=postgresql://...
+   AUTH_SECRET=        # any long random string
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
+   SMTP_HOST=
+   SMTP_PORT=
+   SMTP_USER=
+   SMTP_PASS=
+   SMTP_FROM=
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+3. Apply the schema and start the dev server:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   ```bash
+   npx prisma migrate dev
+   npm run dev
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Then open [localhost:3000](http://localhost:3000).
