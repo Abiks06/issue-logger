@@ -2,7 +2,7 @@ import { handleFor } from "@/lib/constants";
 
 // Pure helpers for the issue timeline and @mentions.
 
-export type TrackedField = "title" | "description" | "status" | "priority" | "type" | "assignee" | "dueDate" | "estimate" | "labels";
+export type TrackedField = "title" | "description" | "status" | "priority" | "type" | "assignee" | "dueDate" | "estimate" | "labels" | "parent";
 
 type Snapshot = {
   title: string;
@@ -11,6 +11,7 @@ type Snapshot = {
   priority: string;
   type: string;
   assigneeId: string | null;
+  parentId?: string | null;
   dueDate: Date | null;
   estimate: number | null;
   labelIds: string[];
@@ -41,6 +42,7 @@ export function diffIssue(prev: Snapshot, next: Partial<Snapshot>): FieldChange[
   if (next.priority !== undefined) push("priority", prev.priority, next.priority);
   if (next.type !== undefined) push("type", prev.type, next.type);
   if (next.assigneeId !== undefined) push("assignee", prev.assigneeId, next.assigneeId);
+  if (next.parentId !== undefined) push("parent", prev.parentId ?? null, next.parentId);
   if (next.dueDate !== undefined) push("dueDate", dateValue(prev.dueDate), dateValue(next.dueDate));
   if (next.estimate !== undefined) {
     push("estimate", prev.estimate?.toString() ?? null, next.estimate?.toString() ?? null);

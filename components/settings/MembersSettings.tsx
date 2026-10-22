@@ -3,24 +3,27 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { ChevronDown, UserPlus } from "lucide-react";
-import { addMember, changeMemberRole, removeMember } from "@/actions/projects";
+import { ChevronDown, Mail, UserPlus } from "lucide-react";
+import { addMember, changeMemberRole, removeMember, revokeInvite } from "@/actions/projects";
 import { canChangeRole, canRemoveMember } from "@/lib/permissions";
 import { ROLES, ROLE_META, handleFor, type Role } from "@/lib/constants";
-import { Avatar } from "@/components/ui/bits";
+import { Avatar, TimeAgo } from "@/components/ui/bits";
 import Picker from "@/components/ui/Picker";
 import ConfirmButton from "@/components/ui/ConfirmButton";
 
+type Invite = { id: string; email: string; role: string; createdAt: Date; invitedBy: string | null };
 type Member = { id: string; role: string; joinedAt: Date; user: { id: string; name: string; email: string } };
 
 export default function MembersSettings({
   projectId,
   members,
+  invites,
   myRole,
   meId,
 }: {
   projectId: string;
   members: Member[];
+  invites: Invite[];
   myRole: Role;
   meId: string;
 }) {
@@ -48,7 +51,13 @@ export default function MembersSettings({
           className="card flex flex-col gap-2 p-3 sm:flex-row"
           onSubmit={(e) => {
             e.preventDefault();
-            run(() => addMember(projectId, { email, role: inviteRole }), "Member added", () => setEmail(""));
+            startTransition(async () => {
+              const res = await addMember(projectId, { email, role: inviteRole });
+              if (!res.ok) return void toast.error(res.error);
+              toast.success(res.data.invited ? "Invite saved: they'll join when they sign up" : "Member added");
+              setEmail("");
+              router.refresh();
+            });
           }}
         >
           <input
@@ -57,7 +66,7 @@ export default function MembersSettings({
             placeholder="teammate@company.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            aria-label="Email of an existing user"
+            aria-label="Teammate email"
             required
           />
           <Picker
@@ -73,6 +82,34 @@ export default function MembersSettings({
             <UserPlus className="h-4 w-4" /> Add
           </button>
         </form>
+      )}
+
+      {invites.length > 0 && (
+        <div className="card">
+          <p className="border-b border-line px-3 py-2 text-xs font-medium text-muted">Pending invites</p>
+          <ul className="divide-y divide-line">
+            {invites.map((inv) => (
+              <li key={inv.id} className="flex items-center gap-3 px-3 py-2 text-[13px]">
+                <Mail className="h-4 w-4 shrink-0 text-faint" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{inv.email}</p>
+                  <p className="truncate text-xs text-faint">
+                    {ROLE_META[inv.role as Role].label} · invited <TimeAgo date={inv.createdAt} />{inv.invitedBy && ` by ${inv.invitedBy}`}
+                  </p>
+                </div>
+                {canInvite && (
+                  <button
+                    className="btn-ghost h-7 px-2 text-xs text-danger hover:text-danger"
+                    disabled={pending}
+                    onClick={() => run(() => revokeInvite(inv.id), "Invite revoked")}
+                  >
+                    Revoke
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <ul className="card divide-y divide-line">

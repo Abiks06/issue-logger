@@ -44,6 +44,7 @@ export async function createIssue(projectId: string, input: unknown): Promise<Ac
         priority: data.priority,
         type: data.type,
         assigneeId: data.assigneeId ?? null,
+        parentId: data.parentId ?? null,
         dueDate: data.dueDate ?? null,
         estimate: data.estimate ?? null,
         reporterId: user.id,
@@ -80,6 +81,7 @@ async function applyPatch(
       priority: patch.priority,
       type: patch.type,
       assigneeId: patch.assigneeId,
+      parentId: patch.parentId,
       dueDate: patch.dueDate,
       estimate: patch.estimate,
       labelIds: patch.labelIds,
@@ -88,7 +90,12 @@ async function applyPatch(
   if (changes.length === 0 && extra.position === undefined) return;
 
   await prisma.$transaction(async (tx) => {
-    await assertProjectRefs(tx, issue.projectId, { assigneeId: patch.assigneeId, labelIds: patch.labelIds });
+    await assertProjectRefs(tx, issue.projectId, {
+      assigneeId: patch.assigneeId,
+      labelIds: patch.labelIds,
+      parentId: patch.parentId,
+      issueId: issue.id,
+    });
 
     const statusChanged = patch.status !== undefined && patch.status !== issue.status;
     let position = extra.position;
@@ -103,6 +110,7 @@ async function applyPatch(
         priority: patch.priority,
         type: patch.type,
         assigneeId: patch.assigneeId,
+        parentId: patch.parentId,
         dueDate: patch.dueDate,
         estimate: patch.estimate,
         position,
@@ -282,6 +290,43 @@ export async function deleteComment(commentId: string): Promise<ActionResult> {
     await prisma.comment.delete({ where: { id: commentId } });
     refresh(comment.issue.project.key, comment.issue.number);
     return undefined;
+  });
+}
+
+export async function editComment(commentId: string, input: unknown): Promise<ActionResult> {
+  return run(async () => {
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+      include: { issue: { select: { projectId: true, number: true, project: { select: { key: true } } } } },
+    });
+    if (!comment) throw new ActionError("Comment not found.");
+    const { user } = await authorizeProject(comment.issue.projectId, "issue:comment");
+    if (comment.authorId !== user.id) throw new ActionError("You can only edit your own comments.");
+    const { body } = commentSchema.parse(input);
+    await prisma.comment.update({ where: { id: commentId }, data: { body } });
+    refresh(comment.issue.project.key, comment.issue.number);
+    return undefined;
+  });
+}
+
+/** Issues in one project matching a title or number, for the parent picker. */
+export async function findProjectIssues(projectId: string, q: string) {
+  const user = await currentUser();
+  if (!user) return [];
+  const member = await prisma.projectMember.findUnique({ where: { projectId_userId: { projectId, userId: user.id } } });
+  if (!member) return [];
+  const query = q.trim().slice(0, 100);
+  const asNumber = /^#?\d+$/.test(query) ? Number(query.replace("#", "")) : null;
+  return prisma.issue.findMany({
+    where: {
+      projectId,
+      ...(query
+        ? { OR: [{ title: { contains: query, mode: "insensitive" } }, ...(asNumber ? [{ number: asNumber }] : [])] }
+        : {}),
+    },
+    orderBy: { updatedAt: "desc" },
+    take: 8,
+    select: { id: true, number: true, title: true, status: true },
   });
 }
 

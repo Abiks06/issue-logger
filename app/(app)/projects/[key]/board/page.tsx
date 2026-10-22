@@ -6,6 +6,7 @@ import { issueRowSelect } from "@/lib/queries";
 import { daysAgo } from "@/lib/analytics";
 import type { Status } from "@/lib/constants";
 import Board from "@/components/board/Board";
+import AutoRefresh from "@/components/AutoRefresh";
 
 export const metadata: Metadata = { title: "Board" };
 
@@ -28,7 +29,10 @@ export default async function BoardPage({ params }: PageProps<"/projects/[key]/b
   });
 
   return (
+    <>
+    <AutoRefresh />
     <Board
+      projectId={project.id}
       projectKey={project.key}
       columns={COLUMNS}
       issues={issues}
@@ -36,5 +40,6 @@ export default async function BoardPage({ params }: PageProps<"/projects/[key]/b
       canEdit={can(role, "issue:write")}
       columnNotes={{ DONE: `Closed in the last ${DONE_WINDOW_DAYS} days` }}
     />
+    </>
   );
 }

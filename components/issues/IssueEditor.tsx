@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { Pencil } from "lucide-react";
 import { updateIssue } from "@/actions/issues";
 import { Markdown } from "@/components/ui/bits";
-import MarkdownEditor from "@/components/ui/MarkdownEditor";
+import MarkdownEditor, { type Mentionable } from "@/components/ui/MarkdownEditor";
 
 /** Title and description, read-only until "Edit" is pressed. */
 export default function IssueEditor({
@@ -14,11 +14,13 @@ export default function IssueEditor({
   title,
   description,
   canEdit,
+  mentions,
 }: {
   issueId: string;
   title: string;
   description: string;
   canEdit: boolean;
+  mentions: Mentionable[];
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -56,7 +58,7 @@ export default function IssueEditor({
           aria-label="Title"
           autoFocus
         />
-        <MarkdownEditor value={draftBody} onChange={setDraftBody} rows={14} onSubmit={save} placeholder="Add a description…" />
+        <MarkdownEditor value={draftBody} onChange={setDraftBody} rows={14} onSubmit={save} placeholder="Add a description…" mentions={mentions} />
         <div className="flex justify-end gap-2">
           <button className="btn-secondary" onClick={() => setEditing(false)}>Cancel</button>
           <button className="btn-primary" onClick={save} disabled={pending}>{pending ? "Saving…" : "Save"}</button>

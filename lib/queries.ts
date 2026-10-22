@@ -35,6 +35,7 @@ export const issueRowSelect = {
   assignee: { select: { id: true, name: true } },
   labels: { select: { id: true, name: true, color: true }, orderBy: { name: "asc" } },
   _count: { select: { comments: true } },
+  children: { select: { status: true } },
 } satisfies Prisma.IssueSelect;
 
 export type IssueRow = Prisma.IssueGetPayload<{ select: typeof issueRowSelect }>;

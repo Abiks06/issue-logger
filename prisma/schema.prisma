@@ -71,22 +71,26 @@ enum TokenType {
 // ─── Accounts ───────────────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
-  name          String
-  email         String    @unique
-  passwordHash  String
-  emailVerified DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  name           String
+  email          String    @unique
+  passwordHash   String
+  emailVerified  DateTime?
+  /// Bumped to revoke every session (password change, "sign out everywhere").
+  sessionVersion Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   memberships    ProjectMember[]
-  assignedIssues Issue[]          @relation("IssueAssignee")
-  reportedIssues Issue[]          @relation("IssueReporter")
+  assignedIssues Issue[]         @relation("IssueAssignee")
+  reportedIssues Issue[]         @relation("IssueReporter")
   comments       Comment[]
   activities     Activity[]
-  notifications  Notification[]   @relation("NotificationRecipient")
-  triggered      Notification[]   @relation("NotificationActor")
+  notifications  Notification[]  @relation("NotificationRecipient")
+  triggered      Notification[]  @relation("NotificationActor")
   apiKeys        ApiKey[]
+  invitesSent    ProjectInvite[]
+  savedViews     SavedView[]
 }
 
 /// Single-use tokens for email verification and password reset.
@@ -118,6 +122,8 @@ model Project {
   issues  Issue[]
   labels  Label[]
   apiKeys ApiKey[]
+  invites ProjectInvite[]
+  views   SavedView[]
 }
 
 model ProjectMember {
@@ -132,6 +138,37 @@ model ProjectMember {
 
   @@unique([projectId, userId])
   @@index([userId])
+}
+
+/// Invitation for an email with no account yet; accepted automatically on sign-up.
+model ProjectInvite {
+  id          String      @id @default(cuid())
+  projectId   String
+  email       String
+  role        ProjectRole @default(MEMBER)
+  invitedById String?
+  createdAt   DateTime    @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invitedBy User?   @relation(fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, email])
+  @@index([email])
+}
+
+/// A named list-view filter, private to its owner.
+model SavedView {
+  id        String   @id @default(cuid())
+  projectId String
+  userId    String
+  name      String   @db.VarChar(40)
+  query     String   @db.VarChar(1000)
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, projectId])
 }
 
 model Label {
@@ -188,10 +225,13 @@ model Issue {
   lastSeenAt  DateTime?
   environment String?       @db.VarChar(40)
   closedAt    DateTime?
+  parentId    String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent        Issue?         @relation("SubIssues", fields: [parentId], references: [id], onDelete: SetNull)
+  children      Issue[]        @relation("SubIssues")
   assignee      User?          @relation("IssueAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   reporter      User?          @relation("IssueReporter", fields: [reporterId], references: [id], onDelete: SetNull)
   labels        Label[]
@@ -204,6 +244,7 @@ model Issue {
   @@index([projectId, status, position])
   @@index([assigneeId, status])
   @@index([projectId, createdAt])
+  @@index([parentId])
 }
 
 model Comment {

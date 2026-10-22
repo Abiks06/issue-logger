@@ -18,7 +18,9 @@ export default function LoginForm({ next, notice }: { next: string; notice: stri
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const parsed = loginSchema.safeParse(Object.fromEntries(new FormData(e.currentTarget)));
+    const form = new FormData(e.currentTarget);
+    const remember = form.get("remember") === "on";
+    const parsed = loginSchema.safeParse(Object.fromEntries(form));
     setError("");
     setUnverifiedEmail(null);
     if (!parsed.success) {
@@ -28,7 +30,7 @@ export default function LoginForm({ next, notice }: { next: string; notice: stri
     setErrors({});
 
     startTransition(async () => {
-      const result = await signIn("credentials", { ...parsed.data, redirect: false });
+      const result = await signIn("credentials", { ...parsed.data, remember: String(remember), redirect: false });
       const code = result?.code ?? result?.error ?? "";
       if (!result?.error) {
         router.push(next);
@@ -87,6 +89,14 @@ export default function LoginForm({ next, notice }: { next: string; notice: stri
         >
           <input id="password" name="password" type="password" autoComplete="current-password" className="input" {...describedBy("password", errors.password)} />
         </Field>
+
+        <label className="-mt-1 flex items-start gap-2 text-[13px] text-muted">
+          <input type="checkbox" name="remember" defaultChecked className="mt-0.5 accent-[var(--accent)]" />
+          <span>
+            Keep me signed in
+            <span className="block text-xs text-faint">Untick on a shared computer: you&apos;ll be signed out after 12 hours of inactivity.</span>
+          </span>
+        </label>
 
         <button type="submit" className="btn-primary mt-1 h-9" disabled={pending}>
           {pending ? "Signing in…" : "Sign in"}

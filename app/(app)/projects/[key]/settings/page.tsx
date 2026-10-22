@@ -29,7 +29,7 @@ export default async function SettingsPage({ params }: PageProps<"/projects/[key
   const { project, role, user } = await requireProject(key);
   const canManage = can(role, "project:manage");
 
-  const [members, labels, apiKeys] = await Promise.all([
+  const [members, labels, apiKeys, invites] = await Promise.all([
     projectMembers(project.id),
     projectLabels(project.id),
     canManage
@@ -39,6 +39,11 @@ export default async function SettingsPage({ params }: PageProps<"/projects/[key
           select: { id: true, name: true, prefix: true, createdAt: true, lastUsedAt: true, revokedAt: true, createdBy: { select: { name: true } } },
         })
       : Promise.resolve([]),
+    prisma.projectInvite.findMany({
+      where: { projectId: project.id },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, email: true, role: true, createdAt: true, invitedBy: { select: { name: true } } },
+    }),
   ]);
 
   return (
@@ -48,10 +53,11 @@ export default async function SettingsPage({ params }: PageProps<"/projects/[key
           <GeneralSettings project={{ id: project.id, key: project.key, name: project.name, description: project.description, color: project.color }} />
         </Section>
       )}
-      <Section id="members" title="Members" description="Owners and admins manage the team. Roles control who can edit, triage and configure.">
+      <Section id="members" title="Members" description="Add teammates by email. People without an account get an invite and join automatically when they sign up.">
         <MembersSettings
           projectId={project.id}
           members={members.map((m) => ({ id: m.id, role: m.role, joinedAt: m.createdAt, user: m.user }))}
+          invites={invites.map((i) => ({ ...i, invitedBy: i.invitedBy?.name ?? null }))}
           myRole={role}
           meId={user.id}
         />

@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { loginSchema } from "@/lib/validation";
 import { createRateLimiter } from "@/lib/rate-limit";
+import { SESSION_MAX_AGE_SECONDS, idleExpired, needsRecheck, parseRemember } from "@/lib/session-policy";
 
 if (!process.env.NEXTAUTH_URL && process.env.VERCEL_URL) {
   process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
@@ -31,8 +32,8 @@ const DUMMY_HASH = "$2b$12$IU1U5wUoXGXpJ4QWUTjgKOmwU9H44T5kxhZf7pYWA1SvELhG9oUoS
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
     strategy: "jwt",
-    maxAge: 30 * 60, // 30-minute idle timeout
-    updateAge: 5 * 60, // slide the expiry while the user is active
+    // Re-issued on every request, so active users stay signed in. See lib/session-policy.ts.
+    maxAge: SESSION_MAX_AGE_SECONDS,
   },
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   pages: {
@@ -45,6 +46,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        remember: { label: "Keep me signed in", type: "checkbox" },
       },
       async authorize(credentials) {
         const parsed = loginSchema.safeParse(credentials);
@@ -60,17 +62,40 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Only reveal verification state once the password has been proven.
         if (!user.emailVerified) throw new EmailNotVerifiedError();
 
-        return { id: user.id, name: user.name, email: user.email };
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          remember: parseRemember(credentials?.remember),
+          sessionVersion: user.sessionVersion,
+        };
       },
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
-      if (user?.id) token.id = user.id;
+    async jwt({ token, user }) {
+      const now = Date.now();
+      if (user?.id) {
+        return { ...token, id: user.id, sv: user.sessionVersion ?? 0, remember: user.remember, lastSeen: now, checkedAt: now };
+      }
+      if (!token.id || idleExpired(token, now)) return null;
+      token.lastSeen = now;
+
+      if (needsRecheck(token, now)) {
+        // Revoked (password changed, signed out everywhere) or deleted users lose the session.
+        const current = await prisma.user.findUnique({
+          where: { id: token.id },
+          select: { name: true, sessionVersion: true },
+        });
+        if (!current || current.sessionVersion !== (token.sv ?? 0)) return null;
+        token.name = current.name;
+        token.checkedAt = now;
+      }
       return token;
     },
     session({ session, token }) {
-      if (token.id) session.user.id = token.id as string;
+      if (token.id) session.user.id = token.id;
+      session.remember = token.remember !== false;
       return session;
     },
   },

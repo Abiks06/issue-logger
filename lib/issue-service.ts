@@ -31,7 +31,7 @@ export function closedAtFor(prev: Status | null, next: Status) {
 export async function assertProjectRefs(
   tx: Tx,
   projectId: string,
-  { assigneeId, labelIds }: { assigneeId?: string | null; labelIds?: string[] },
+  { assigneeId, labelIds, parentId, issueId }: { assigneeId?: string | null; labelIds?: string[]; parentId?: string | null; issueId?: string },
 ) {
   if (assigneeId) {
     const member = await tx.projectMember.findUnique({
@@ -43,6 +43,20 @@ export async function assertProjectRefs(
   if (labelIds?.length) {
     const count = await tx.label.count({ where: { projectId, id: { in: labelIds } } });
     if (count !== new Set(labelIds).size) throw new ActionError("Unknown label.");
+  }
+  if (parentId) {
+    if (parentId === issueId) throw new ActionError("An issue can't be its own parent.");
+    // Walk up from the proposed parent; meeting this issue would create a cycle.
+    let cursor: string | null = parentId;
+    for (let depth = 0; cursor && depth < 50; depth++) {
+      const row: { projectId: string; parentId: string | null } | null = await tx.issue.findUnique({
+        where: { id: cursor },
+        select: { projectId: true, parentId: true },
+      });
+      if (!row || row.projectId !== projectId) throw new ActionError("The parent must be an issue in this project.");
+      if (row.parentId === issueId && issueId) throw new ActionError("That would make the issue a sub-issue of itself.");
+      cursor = row.parentId;
+    }
   }
 }
 

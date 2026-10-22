@@ -10,6 +10,7 @@ import { Avatar, EmptyState, ProjectBadge, TimeAgo, shortDate } from "@/componen
 import { PriorityIcon, StatusIcon } from "@/components/ui/icons";
 import StatTile from "@/components/charts/StatTile";
 import PageHeader from "@/components/PageHeader";
+import AutoRefresh from "@/components/AutoRefresh";
 
 export const metadata: Metadata = { title: "My work" };
 
@@ -54,6 +55,7 @@ export default async function MyWorkPage() {
 
   return (
     <>
+      <AutoRefresh />
       <PageHeader title={`${greeting(now)}, ${user.name.split(" ")[0]}`} subtitle="Everything assigned to you across your projects." />
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 sm:p-6">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

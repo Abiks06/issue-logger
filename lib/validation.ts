@@ -112,6 +112,7 @@ const issueFields = {
   priority: z.enum(PRIORITIES),
   type: z.enum(TYPES),
   assigneeId: optionalId,
+  parentId: optionalId,
   dueDate: optionalDate,
   estimate: z.number().int().min(0).max(100).nullable().optional(),
   labelIds: z.array(z.string()).max(20),

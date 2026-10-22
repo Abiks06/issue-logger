@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/access";
 import { issueKey, STATUS_META, type Status } from "@/lib/constants";
 import { EmptyState, TimeAgo } from "@/components/ui/bits";
 import PageHeader from "@/components/PageHeader";
+import AutoRefresh from "@/components/AutoRefresh";
 import MarkAllRead from "./MarkAllRead";
 
 export const metadata: Metadata = { title: "Inbox" };
@@ -34,6 +35,7 @@ export default async function InboxPage() {
 
   return (
     <>
+      <AutoRefresh />
       <PageHeader title="Inbox" subtitle={unread ? `${unread} unread` : "You're all caught up"}>
         {unread > 0 && <MarkAllRead />}
       </PageHeader>

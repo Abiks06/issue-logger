@@ -10,6 +10,7 @@ import { generateApiKey } from "@/lib/tokens";
 import { ROLES, type Role } from "@/lib/constants";
 import { apiKeySchema, inviteSchema, labelSchema, projectSchema, projectSettingsSchema } from "@/lib/validation";
 import { z } from "zod";
+import { actionEmail, appUrl, mailConfigured, sendMail } from "@/lib/mail";
 
 const DEFAULT_LABELS = [
   { name: "frontend", color: "#06b6d4" },
@@ -74,28 +75,66 @@ export async function deleteProject(projectId: string, confirmKey: string): Prom
 
 // ─── Members ──────────────────────────────────────────────────────────
 
-export async function addMember(projectId: string, input: unknown): Promise<ActionResult> {
+/**
+ * Adds an existing user straight away, or records an invite for an email with
+ * no account yet (accepted automatically when they sign up).
+ */
+export async function addMember(projectId: string, input: unknown): Promise<ActionResult<{ invited: boolean }>> {
   return run(async () => {
-    const { role } = await authorizeProject(projectId, "project:manage");
+    const { user, role } = await authorizeProject(projectId, "project:manage");
     const data = inviteSchema.parse(input);
     if (!canChangeRole(role, "VIEWER", data.role)) {
       throw new ActionError("You can only add members with a role below your own.");
     }
+    const project = await prisma.project.findUniqueOrThrow({ where: { id: projectId }, select: { key: true, name: true } });
     const invitee = await prisma.user.findUnique({ where: { email: data.email } });
-    if (!invitee) throw new ActionError("No account uses that email yet. Ask them to sign up first.");
+
+    if (!invitee) {
+      await prisma.projectInvite.upsert({
+        where: { projectId_email: { projectId, email: data.email } },
+        create: { projectId, email: data.email, role: data.role, invitedById: user.id },
+        update: { role: data.role, invitedById: user.id },
+      });
+      if (mailConfigured()) {
+        await sendMail({
+          to: data.email,
+          subject: `${user.name} invited you to ${project.name} on Issue Logger`,
+          html: actionEmail({
+            heading: `Join ${project.name}`,
+            greetingName: "there",
+            body: `${user.name} invited you to the ${project.name} project. Create an account with this email address and you'll be added automatically.`,
+            cta: "Create your account",
+            url: appUrl(`/auth/register?email=${encodeURIComponent(data.email)}`),
+          }),
+        }).catch((err) => console.error("Invite email failed", err));
+      }
+      refresh(project.key);
+      return { invited: true };
+    }
 
     try {
-      const m = await prisma.projectMember.create({
-        data: { projectId, userId: invitee.id, role: data.role },
-        include: { project: { select: { key: true } } },
-      });
-      refresh(m.project.key);
+      await prisma.projectMember.create({ data: { projectId, userId: invitee.id, role: data.role } });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
         throw new ActionError("They're already a member of this project.");
       }
       throw err;
     }
+    refresh(project.key);
+    return { invited: false };
+  });
+}
+
+export async function revokeInvite(inviteId: string): Promise<ActionResult> {
+  return run(async () => {
+    const invite = await prisma.projectInvite.findUnique({
+      where: { id: inviteId },
+      include: { project: { select: { key: true } } },
+    });
+    if (!invite) throw new ActionError("Invite not found.");
+    await authorizeProject(invite.projectId, "project:manage");
+    await prisma.projectInvite.delete({ where: { id: inviteId } });
+    refresh(invite.project.key);
     return undefined;
   });
 }
@@ -216,6 +255,40 @@ export async function revokeApiKey(apiKeyId: string): Promise<ActionResult> {
     await authorizeProject(key.projectId, "project:manage");
     await prisma.apiKey.update({ where: { id: apiKeyId }, data: { revokedAt: new Date() } });
     refresh(key.project.key);
+    return undefined;
+  });
+}
+
+// ─── Saved views ──────────────────────────────────────────────────────
+
+const savedViewSchema = z.object({
+  name: z.string().trim().min(1, "Name the view").max(40),
+  // A list-view query string such as "?status=TODO&assignee=me".
+  query: z.string().max(1000).regex(/^\?[\w%.,=&+-]*$/, "Invalid filter"),
+});
+
+export async function createSavedView(projectId: string, input: unknown): Promise<ActionResult<{ id: string }>> {
+  return run(async () => {
+    const { user } = await authorizeProject(projectId, "project:view");
+    const data = savedViewSchema.parse(input);
+    const count = await prisma.savedView.count({ where: { projectId, userId: user.id } });
+    if (count >= 20) throw new ActionError("You can save up to 20 views per project.");
+    const view = await prisma.savedView.create({
+      data: { ...data, projectId, userId: user.id },
+      include: { project: { select: { key: true } } },
+    });
+    refresh(view.project.key);
+    return { id: view.id };
+  });
+}
+
+export async function deleteSavedView(viewId: string): Promise<ActionResult> {
+  return run(async () => {
+    const user = await currentUser();
+    const view = await prisma.savedView.findUnique({ where: { id: viewId }, include: { project: { select: { key: true } } } });
+    if (!user || !view || view.userId !== user.id) throw new ActionError("View not found.");
+    await prisma.savedView.delete({ where: { id: viewId } });
+    refresh(view.project.key);
     return undefined;
   });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -31,6 +31,8 @@ export default function IssueTable({ projectId, projectKey, issues, members, meI
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Keyboard cursor: j/k (or arrows) move, x selects, Enter opens.
+  const [cursor, setCursor] = useState(-1);
 
   const allSelected = issues.length > 0 && selected.size === issues.length;
   const toggle = (id: string) =>
@@ -58,6 +60,28 @@ export default function IssueTable({ projectId, projectKey, issues, members, meI
     router.refresh();
   };
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if (e.metaKey || e.ctrlKey || e.altKey || el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName)) return;
+      if (document.querySelector("dialog[open], [role=listbox], [role=dialog]")) return;
+      const max = issues.length - 1;
+      if (e.key === "j" || e.key === "ArrowDown") setCursor((c) => Math.min(max, c + 1));
+      else if (e.key === "k" || e.key === "ArrowUp") setCursor((c) => Math.max(0, c - 1));
+      else if (e.key === "x" && cursor >= 0 && canEdit) toggle(issues[cursor].id);
+      else if (e.key === "Enter" && cursor >= 0) router.push(`/projects/${projectKey}/issues/${issues[cursor].number}`);
+      else if (e.key === "Escape" && selected.size) setSelected(new Set());
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
+  useEffect(() => {
+    if (cursor >= 0) document.querySelector(`[data-row="${cursor}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [cursor]);
+
   if (issues.length === 0) {
     return (
       <div className="card m-4 sm:mx-6">
@@ -82,16 +106,21 @@ export default function IssueTable({ projectId, projectKey, issues, members, meI
             />
           )}
           <span>{total} {total === 1 ? "issue" : "issues"}</span>
+          <span className="ml-auto hidden items-center gap-1 lg:flex">
+            <span className="kbd">J</span><span className="kbd">K</span> move <span className="kbd ml-1">X</span> select <span className="kbd ml-1">↵</span> open
+          </span>
         </div>
         <ul>
-          {issues.map((issue) => {
+          {issues.map((issue, index) => {
             const closed = issue.status === "DONE" || issue.status === "CANCELED";
             const overdue = !closed && isOverdue({ dueDate: issue.dueDate, closedAt: null });
             const checked = selected.has(issue.id);
             return (
               <li
                 key={issue.id}
-                className={`group flex items-center gap-3 border-b border-line px-3 py-2 last:border-0 hover:bg-surface-2/60 ${checked ? "bg-accent-soft" : ""}`}
+                data-row={index}
+                onMouseEnter={() => setCursor(index)}
+                className={`group relative flex items-center gap-3 border-b border-line px-3 py-2 last:border-0 hover:bg-surface-2/60 ${checked ? "bg-accent-soft" : ""} ${cursor === index ? "bg-surface-2/60 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-accent" : ""}`}
               >
                 {canEdit && (
                   <input

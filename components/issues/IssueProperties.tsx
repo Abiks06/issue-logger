@@ -3,12 +3,13 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Copy, Repeat, Trash2 } from "lucide-react";
+import { Copy, GitBranch, Repeat, Trash2 } from "lucide-react";
 import { deleteIssues, updateIssue } from "@/actions/issues";
 import type { IssuePatch } from "@/lib/validation";
 import { PRIORITY_META, STATUS_META, TYPE_META, type IssueKind, type Priority, type Status } from "@/lib/constants";
 import { isOverdue } from "@/lib/analytics";
 import Picker from "@/components/ui/Picker";
+import ParentPicker from "@/components/issues/ParentPicker";
 import ConfirmButton from "@/components/ui/ConfirmButton";
 import { Avatar, LabelChip, TimeAgo } from "@/components/ui/bits";
 import { PriorityIcon, StatusIcon, TypeIcon } from "@/components/ui/icons";
@@ -33,6 +34,10 @@ type IssueProps = {
   occurrences: number;
   lastSeenAt: Date | null;
   environment: string | null;
+  number: number;
+  title: string;
+  parent: { id: string; number: number; title: string; status: string } | null;
+  childCount: number;
 };
 
 type Props = {
@@ -119,6 +124,17 @@ export default function IssueProperties({ projectId, projectKey, issue: initial,
             {issueLabels.length ? issueLabels.map((l) => <LabelChip key={l.id} name={l.name} color={l.color} />) : <span className="text-faint">No labels</span>}
           </Picker>
         </Row>
+        <Row label="Parent">
+          <ParentPicker
+            projectId={projectId}
+            projectKey={projectKey}
+            issueId={issue.id}
+            parent={issue.parent}
+            disabled={!canEdit}
+            triggerClassName={trigger}
+            onChange={(parent) => patch({ parent }, { parentId: parent?.id ?? null })}
+          />
+        </Row>
         <Row label="Due date">
           <input
             type="date"
@@ -170,7 +186,17 @@ export default function IssueProperties({ projectId, projectKey, issue: initial,
               toast.success("Link copied");
             }}
           >
-            <Copy className="h-3.5 w-3.5" /> Copy link
+            <Copy className="h-3.5 w-3.5" /> Link
+          </button>
+          <button
+            className="btn-ghost h-7 flex-1 text-xs"
+            title="Copy a git branch name for this issue"
+            onClick={async () => {
+              await navigator.clipboard.writeText(branchName(projectKey, issue.number, issue.title));
+              toast.success("Branch name copied");
+            }}
+          >
+            <GitBranch className="h-3.5 w-3.5" /> Branch
           </button>
           {canDelete && (
             <ConfirmButton
@@ -191,6 +217,12 @@ export default function IssueProperties({ projectId, projectKey, issue: initial,
       </div>
     </aside>
   );
+}
+
+/** "web-12-login-form-loses-focus", kept short enough for terminals. */
+function branchName(projectKey: string, number: number, title: string) {
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40).replace(/-$/, "");
+  return `${projectKey.toLowerCase()}-${number}${slug ? `-${slug}` : ""}`;
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

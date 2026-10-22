@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarClock, MessageSquare, Repeat } from "lucide-react";
+import { CalendarClock, ListTree, MessageSquare, Repeat } from "lucide-react";
 import type { IssueRow } from "@/lib/queries";
 import type { IssueKind, Priority } from "@/lib/constants";
 import { isOverdue } from "@/lib/analytics";
@@ -39,6 +39,12 @@ export default function IssueCard({ issue, projectKey, dragging }: { issue: Issu
           <span className={`inline-flex items-center gap-1 ${overdue ? "font-medium text-danger" : ""}`}>
             <CalendarClock className="h-3 w-3" />
             {shortDate(issue.dueDate)}
+          </span>
+        )}
+        {issue.children.length > 0 && (
+          <span className="inline-flex items-center gap-1" title="Sub-issues done">
+            <ListTree className="h-3 w-3" />
+            {issue.children.filter((c) => c.status === "DONE" || c.status === "CANCELED").length}/{issue.children.length}
           </span>
         )}
         {issue._count.comments > 0 && (

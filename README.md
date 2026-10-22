@@ -23,16 +23,16 @@ v1 was a single-user list of issues. v2 rebuilds it around teams and automation:
 
 ## Features
 
-- **Projects and roles.** Each project has a key, colour, labels and members. Viewers read, members edit and comment, admins manage settings, members, labels and API keys, owners can delete. Every server action re-checks the role; non-members get a 404 so project keys can't be probed.
-- **Board.** Columns per status with drag-and-drop ordering (fractional positions, so a move rewrites one row). Moves are optimistic and roll back if the server refuses. Filter cards by text or "assigned to me".
-- **List.** Search (title, body, `#number` or `KEY-123`), filter by status, priority, type, assignee and label, sort five ways, paginate. All state lives in the URL, so filtered views can be bookmarked. Select rows to change status, priority or assignee in bulk, or delete.
-- **Issue page.** Markdown description with templates per issue type, inline property editing, comments with @mentions, and a timeline of every change.
+- **Projects and roles.** Each project has a key, colour, labels and members. Invite teammates by email; people without an account get an invite and join automatically when they sign up. Viewers read, members edit and comment, admins manage settings, members, labels and API keys, owners can delete. Every server action re-checks the role; non-members get a 404 so project keys can't be probed.
+- **Board.** Columns per status with drag-and-drop ordering (fractional positions, so a move rewrites one row). Moves are optimistic and roll back if the server refuses. Quick-add issues straight into a column, filter cards by text or "assigned to me", and see sub-issue progress on each card.
+- **List.** Search (title, body, `#number` or `KEY-123`), filter by status, priority, type, assignee and label, sort five ways, paginate. All state lives in the URL, so filtered views can be bookmarked. Save any filter combination as a named view. Select rows to change status, priority or assignee in bulk, or delete. Keyboard: `j`/`k` to move, `x` to select, Enter to open.
+- **Issue page.** Markdown editor with a formatting toolbar and shortcuts, templates per issue type, inline property editing, sub-issues with a progress bar, a parent picker that refuses cycles, editable comments with @mention autocomplete, a copy-branch-name button, and a timeline of every change.
 - **Inbox.** Notifications for assignments, mentions, comments on issues you reported or own, status changes and regressions. Opening an issue clears its notifications.
 - **Insights.** Created-vs-resolved chart for the last 30 days, net flow, median time to resolve, overdue count, breakdowns by status, priority and assignee, and the most frequent reported errors.
 - **My work.** Everything assigned to you across projects, grouped by status, with overdue and due-this-week counts and recent activity.
 - **Ingestion API.** See below.
-- **Accounts.** Email/password sign-up with email verification, password reset, profile and password change, JWT sessions with a 30-minute idle timeout.
-- **Polish.** ⌘K / Ctrl+K command palette, `c` to create, `/` to search, `g i` / `g p` / `g h` to navigate. Light, dark and system themes. Works down to phone width.
+- **Accounts.** Email/password sign-up with email verification, password reset, profile and password change. Sessions last 30 days from your last visit (or 12 hours idle if you untick "Keep me signed in"), and "Sign out other devices" or a password change revokes every other session.
+- **Polish.** ⌘K / Ctrl+K command palette, `c` to create, `/` to search, `g i` / `g p` / `g h` to navigate. Pages refresh themselves every 30 seconds and when you return to the tab, so you see teammates' changes. Loading skeletons on every main view. Light, dark and system themes. Works down to phone width.
 
 ## Ingestion API
 
@@ -134,6 +134,7 @@ v2 replaces the data model (string ids, projects, members, new status and priori
 
 ## Security notes
 
+- Sessions are signed JWT cookies re-issued on each request. Every five minutes the token is checked against the user's `sessionVersion`, so revoking sessions or resetting a password signs other devices out within minutes.
 - Passwords are hashed with bcrypt (cost 12). Login is rate-limited per email, unknown emails are checked against a dummy hash so timing doesn't reveal which accounts exist, and verification state is only revealed after the password matches.
 - Email verification and password reset tokens are single-use, expire, and are stored as SHA-256 hashes. Verification needs a click, so mail scanners can't consume the link.
 - API keys are stored as hashes, can be revoked, and are rate-limited. CSV export neutralises spreadsheet formulas.

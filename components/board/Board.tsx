@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { Plus, Search, UserRound } from "lucide-react";
-import { moveIssue } from "@/actions/issues";
+import { createIssue, moveIssue } from "@/actions/issues";
 import { STATUS_META, type Status } from "@/lib/constants";
 import { positionBetween } from "@/lib/ordering";
 import type { IssueRow } from "@/lib/queries";
@@ -13,6 +13,7 @@ import { StatusIcon } from "@/components/ui/icons";
 import IssueCard from "@/components/issues/IssueCard";
 
 type Props = {
+  projectId: string;
   projectKey: string;
   columns: Status[];
   issues: IssueRow[];
@@ -32,7 +33,7 @@ function sortColumn(list: IssueRow[]) {
  * Kanban board with native HTML5 drag and drop. Moves apply optimistically
  * and roll back if the server rejects them. Viewers get a read-only board.
  */
-export default function Board({ projectKey, columns, issues: initial, meId, canEdit, columnNotes = {} }: Props) {
+export default function Board({ projectId, projectKey, columns, issues: initial, meId, canEdit, columnNotes = {} }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [issues, setIssues] = useState(initial);
@@ -41,6 +42,7 @@ export default function Board({ projectKey, columns, issues: initial, meId, canE
   const [drop, setDrop] = useState<Drop | null>(null);
   const [query, setQuery] = useState("");
   const [mine, setMine] = useState(false);
+  const [quickAdd, setQuickAdd] = useState<Status | null>(null);
   const columnRefs = useRef<Partial<Record<Status, HTMLDivElement | null>>>({});
 
   // Fresh server data (after router.refresh) replaces local state.
@@ -165,15 +167,25 @@ export default function Board({ projectKey, columns, issues: initial, meId, canE
                 <h2 className="text-[13px] font-semibold">{STATUS_META[status].label}</h2>
                 <span className="text-xs text-faint">{list.length}</span>
                 {canEdit && (
-                  <Link
-                    href={`/projects/${projectKey}/issues/new?status=${status}`}
+                  <button
                     className="btn-icon ml-auto h-6 w-6"
-                    aria-label={`New issue in ${STATUS_META[status].label}`}
+                    aria-label={`Quick add to ${STATUS_META[status].label}`}
+                    title="Quick add"
+                    onClick={() => setQuickAdd(quickAdd === status ? null : status)}
                   >
                     <Plus className="h-3.5 w-3.5" />
-                  </Link>
+                  </button>
                 )}
               </header>
+              {quickAdd === status && (
+                <QuickAdd
+                  projectId={projectId}
+                  projectKey={projectKey}
+                  status={status}
+                  onClose={() => setQuickAdd(null)}
+                  onCreated={() => router.refresh()}
+                />
+              )}
               {columnNotes[status] && <p className="px-3 pb-2 text-[11px] text-faint">{columnNotes[status]}</p>}
               <div ref={(el) => { columnRefs.current[status] = el; }} className="flex min-h-24 flex-1 flex-col gap-2 overflow-y-auto px-2 pb-2">
                 {list.map((issue, i) => (
@@ -212,4 +224,55 @@ export default function Board({ projectKey, columns, issues: initial, meId, canE
 
 function DropLine() {
   return <div className="mb-2 h-0.5 rounded-full bg-accent" aria-hidden />;
+}
+
+/** Inline title-only create at the top of a column; Enter adds, Esc closes. */
+function QuickAdd({
+  projectId,
+  projectKey,
+  status,
+  onClose,
+  onCreated,
+}: {
+  projectId: string;
+  projectKey: string;
+  status: Status;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [pending, startTransition] = useTransition();
+
+  const submit = () => {
+    if (!title.trim() || pending) return;
+    startTransition(async () => {
+      const res = await createIssue(projectId, { title, status });
+      if (!res.ok) return void toast.error(res.error);
+      toast.success(`Created ${res.data.key}`);
+      setTitle("");
+      onCreated();
+    });
+  };
+
+  return (
+    <div className="card animate-pop mx-2 mb-2 p-2">
+      <input
+        autoFocus
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") submit();
+          if (e.key === "Escape") onClose();
+        }}
+        placeholder="Issue title"
+        aria-label={`New issue in ${STATUS_META[status].label}`}
+        className="h-7 w-full bg-transparent text-[13px] outline-none placeholder:text-faint"
+        readOnly={pending}
+      />
+      <div className="mt-1 flex items-center justify-between text-[11px] text-faint">
+        <Link href={`/projects/${projectKey}/issues/new?status=${status}`} className="hover:text-fg">Full form</Link>
+        <span>Enter to add · Esc to close</span>
+      </div>
+    </div>
+  );
 }

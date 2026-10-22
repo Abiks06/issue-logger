@@ -2,7 +2,10 @@
 
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { z } from "zod";
+import { auth, signIn } from "@/auth";
 import { ActionError, currentUser } from "@/lib/access";
+import { acceptPendingInvites } from "@/lib/invites";
 import { run, type ActionResult } from "@/lib/action";
 import { actionEmail, appUrl, mailConfigured, sendMail } from "@/lib/mail";
 import { randomToken, sha256 } from "@/lib/tokens";
@@ -76,7 +79,9 @@ export async function registerUser(input: unknown): Promise<ActionResult<{ verif
       },
     });
 
-    if (!autoVerify) {
+    if (autoVerify) {
+      await acceptPendingInvites(user.id, user.email);
+    } else {
       try {
         await sendVerification(user.email, user.name);
       } catch (err) {
@@ -94,7 +99,8 @@ export async function verifyEmail(token: string): Promise<ActionResult> {
   return run(async () => {
     const record = await consumeToken(token, "EMAIL_VERIFY");
     if (!record) throw new ActionError("This verification link is invalid or has expired.");
-    await prisma.user.update({ where: { email: record.identifier }, data: { emailVerified: new Date() } });
+    const user = await prisma.user.update({ where: { email: record.identifier }, data: { emailVerified: new Date() } });
+    await acceptPendingInvites(user.id, user.email);
     return undefined;
   });
 }
@@ -146,8 +152,11 @@ export async function resetPassword(token: string, input: unknown): Promise<Acti
         passwordHash: await bcrypt.hash(data.password, 12),
         // Receiving the reset email proves ownership of the address.
         emailVerified: user.emailVerified ?? new Date(),
+        // Whoever knew the old password is signed out everywhere.
+        sessionVersion: { increment: 1 },
       },
     });
+    await acceptPendingInvites(user.id, user.email);
     return undefined;
   });
 }
@@ -162,19 +171,45 @@ export async function updateProfile(input: unknown): Promise<ActionResult> {
   });
 }
 
+/** Checks the signed-in user's password; returns their row. */
+async function verifyCurrentPassword(password: string) {
+  const user = await currentUser();
+  if (!user) throw new ActionError("You need to sign in again.");
+  const row = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+  if (!(await bcrypt.compare(password, row.passwordHash))) {
+    throw new ActionError("Your current password is incorrect.");
+  }
+  return row;
+}
+
+/**
+ * Revokes every session (by bumping sessionVersion), then signs this browser
+ * back in so only other devices are logged out.
+ */
+async function revokeOtherSessions(userId: string, email: string, password: string) {
+  const session = await auth();
+  await prisma.user.update({ where: { id: userId }, data: { sessionVersion: { increment: 1 } } });
+  await signIn("credentials", { email, password, remember: String(session?.remember ?? true), redirect: false });
+}
+
 export async function changePassword(input: unknown): Promise<ActionResult> {
   return run(async () => {
-    const user = await currentUser();
-    if (!user) throw new ActionError("You need to sign in again.");
     const data = changePasswordSchema.parse(input);
-    const row = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
-    if (!(await bcrypt.compare(data.currentPassword, row.passwordHash))) {
-      throw new ActionError("Your current password is incorrect.");
-    }
+    const row = await verifyCurrentPassword(data.currentPassword);
     await prisma.user.update({
-      where: { id: user.id },
+      where: { id: row.id },
       data: { passwordHash: await bcrypt.hash(data.password, 12) },
     });
+    await revokeOtherSessions(row.id, row.email, data.password);
+    return undefined;
+  });
+}
+
+export async function signOutOtherSessions(input: unknown): Promise<ActionResult> {
+  return run(async () => {
+    const { password } = z.object({ password: z.string().min(1, "Enter your password") }).parse(input);
+    const row = await verifyCurrentPassword(password);
+    await revokeOtherSessions(row.id, row.email, password);
     return undefined;
   });
 }

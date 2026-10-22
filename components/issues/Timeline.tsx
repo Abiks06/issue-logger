@@ -1,7 +1,8 @@
 import { AlertOctagon, CirclePlus, Repeat } from "lucide-react";
 import { PRIORITY_META, STATUS_META, TYPE_META, type IssueKind, type Priority, type Status } from "@/lib/constants";
-import { Avatar, Markdown, TimeAgo } from "@/components/ui/bits";
-import DeleteCommentButton from "@/components/issues/DeleteCommentButton";
+import { TimeAgo } from "@/components/ui/bits";
+import CommentItem from "@/components/issues/CommentItem";
+import type { Mentionable } from "@/components/ui/MarkdownEditor";
 
 export type TimelineEntry =
   | {
@@ -11,11 +12,24 @@ export type TimelineEntry =
       actor: string | null;
       activity: { kind: string; field: string | null; from: string | null; to: string | null };
     }
-  | { kind: "comment"; id: string; createdAt: Date; actor: string | null; body: string; canDelete: boolean };
+  | {
+      kind: "comment";
+      id: string;
+      createdAt: Date;
+      actor: string | null;
+      body: string;
+      edited: boolean;
+      canEdit: boolean;
+      canDelete: boolean;
+    };
 
 type Names = Record<string, string>;
 
-function describe(a: { kind: string; field: string | null; from: string | null; to: string | null }, actor: string | null, users: Names, labels: Names) {
+function describe(
+  a: { kind: string; field: string | null; from: string | null; to: string | null },
+  actor: string | null,
+  { users, labels, issues }: { users: Names; labels: Names; issues: Names },
+) {
   const b = (s: React.ReactNode) => <span className="font-medium text-fg">{s}</span>;
   switch (a.kind) {
     case "CREATED":
@@ -45,6 +59,8 @@ function describe(a: { kind: string; field: string | null; from: string | null; 
       return a.to ? <>set the due date to {b(a.to)}</> : <>cleared the due date</>;
     case "estimate":
       return a.to ? <>estimated {b(`${a.to} pts`)}</> : <>cleared the estimate</>;
+    case "parent":
+      return a.to ? <>made this a sub-issue of {b(issues[a.to] ?? "a deleted issue")}</> : <>removed the parent issue</>;
     case "labels": {
       const from = new Set(a.from?.split(",").filter(Boolean));
       const to = new Set(a.to?.split(",").filter(Boolean));
@@ -63,24 +79,34 @@ function describe(a: { kind: string; field: string | null; from: string | null; 
   }
 }
 
-export default function Timeline({ entries, userNames, labelNames }: { entries: TimelineEntry[]; userNames: Names; labelNames: Names }) {
+export default function Timeline({
+  entries,
+  userNames,
+  labelNames,
+  issueNames,
+  mentions,
+}: {
+  entries: TimelineEntry[];
+  userNames: Names;
+  labelNames: Names;
+  issueNames: Names;
+  mentions: Mentionable[];
+}) {
   return (
     <ol className="relative flex flex-col gap-4 before:absolute before:bottom-2 before:left-[9px] before:top-2 before:w-px before:bg-line">
       {entries.map((e) =>
         e.kind === "comment" ? (
-          <li key={e.id} className="relative flex gap-3">
-            <Avatar name={e.actor ?? "Deleted user"} size={20} className="relative ring-4 ring-bg" />
-            <div className="card min-w-0 flex-1">
-              <div className="flex items-center gap-2 border-b border-line px-3 py-1.5 text-xs">
-                <span className="font-medium">{e.actor ?? "Deleted user"}</span>
-                <span className="text-faint"><TimeAgo date={e.createdAt} /></span>
-                {e.canDelete && <DeleteCommentButton commentId={e.id} />}
-              </div>
-              <div className="px-3 py-2.5">
-                <Markdown>{e.body}</Markdown>
-              </div>
-            </div>
-          </li>
+          <CommentItem
+            key={e.id}
+            id={e.id}
+            author={e.actor}
+            body={e.body}
+            createdAt={e.createdAt}
+            edited={e.edited}
+            canEdit={e.canEdit}
+            canDelete={e.canDelete}
+            mentions={mentions}
+          />
         ) : (
           <li key={e.id} className="relative flex items-center gap-3 text-xs text-muted">
             <span className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-bg">
@@ -96,7 +122,7 @@ export default function Timeline({ entries, userNames, labelNames }: { entries: 
             </span>
             <p className="min-w-0 flex-1">
               <span className="font-medium text-fg">{e.actor ?? (e.activity.kind === "REGRESSED" || e.activity.kind === "CREATED" ? "Ingestion API" : "Someone")}</span>{" "}
-              {describe(e.activity, e.actor, userNames, labelNames)}
+              {describe(e.activity, e.actor, { users: userNames, labels: labelNames, issues: issueNames })}
               <span className="text-faint"> · <TimeAgo date={e.createdAt} /></span>
             </p>
           </li>

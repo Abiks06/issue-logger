@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { changePassword, updateProfile } from "@/actions/auth";
+import { changePassword, signOutOtherSessions, updateProfile } from "@/actions/auth";
 import { Field, firstErrors } from "@/components/ui/Field";
 
-export default function AccountForms({ name: initialName }: { name: string }) {
+export default function AccountForms({ name: initialName, remembered }: { name: string; remembered: boolean }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState(initialName);
@@ -49,7 +49,7 @@ export default function AccountForms({ name: initialName }: { name: string }) {
             }
             setErrors({});
             form.reset();
-            toast.success("Password changed");
+            toast.success("Password changed. Other devices were signed out.");
           });
         }}
       >
@@ -65,6 +65,37 @@ export default function AccountForms({ name: initialName }: { name: string }) {
         </Field>
         <div className="flex justify-end">
           <button className="btn-primary" disabled={pending}>Update password</button>
+        </div>
+      </form>
+
+      <form
+        className="card flex flex-col gap-4 p-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const form = e.currentTarget;
+          const password = String(new FormData(form).get("sessionPassword") ?? "");
+          startTransition(async () => {
+            const res = await signOutOtherSessions({ password });
+            if (!res.ok) return void toast.error(res.error);
+            form.reset();
+            toast.success("Signed out everywhere else");
+          });
+        }}
+      >
+        <div>
+          <h2 className="text-sm font-semibold">Sessions</h2>
+          <p className="mt-1 text-[13px] text-muted">
+            {remembered
+              ? "This browser stays signed in for 30 days after your last visit."
+              : "This browser signs out after 12 hours of inactivity."}{" "}
+            Lost a device or signed in somewhere public? Sign out everywhere else.
+          </p>
+        </div>
+        <Field id="sessionPassword" label="Confirm with your password">
+          <input id="sessionPassword" name="sessionPassword" type="password" autoComplete="current-password" className="input" required />
+        </Field>
+        <div className="flex justify-end">
+          <button className="btn-secondary" disabled={pending}>Sign out other devices</button>
         </div>
       </form>
     </div>

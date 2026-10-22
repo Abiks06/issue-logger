@@ -147,7 +147,7 @@ async function main() {
         const author = pick(assignable);
         const at = new Date(createdAt.getTime() + DAY / 3);
         await prisma.comment.create({
-          data: { issueId: issue.id, authorId: author.id, createdAt: at, body: pick([
+          data: { issueId: issue.id, authorId: author.id, createdAt: at, updatedAt: at, body: pick([
             "I can reproduce this on staging. Looking into it now.",
             "Could this be related to the caching change last week? @ada",
             "Pushed a fix behind a flag, needs review.\n\n```ts\nif (!session) return redirect('/login');\n```",
@@ -155,6 +155,28 @@ async function main() {
           ]) },
         });
         await prisma.activity.create({ data: { issueId: issue.id, actorId: author.id, kind: "COMMENTED", createdAt: at } });
+      }
+    }
+
+    if (key === "WEB") {
+      // A parent with sub-issues, so the breakdown and progress bar have something to show.
+      const parent = await prisma.issue.findFirstOrThrow({ where: { projectId: project.id, number: 4 } });
+      const steps: [string, IssueStatus][] = [
+        ["Port buttons and inputs to new tokens", "DONE"],
+        ["Rebuild the settings navigation", "IN_PROGRESS"],
+        ["Dark mode pass on settings", "TODO"],
+      ];
+      for (const [title, status] of steps) {
+        number++;
+        const createdAt = new Date(now - 3 * DAY);
+        await prisma.issue.create({
+          data: {
+            projectId: project.id, number, title, status, type: "TASK", priority: "MEDIUM",
+            parentId: parent.id, reporterId: ada.id, assigneeId: pick(assignable).id,
+            position: number * 1024, createdAt, closedAt: status === "DONE" ? new Date(now - DAY) : null,
+            activities: { create: [{ kind: "CREATED", actorId: ada.id, createdAt }] },
+          },
+        });
       }
     }
 

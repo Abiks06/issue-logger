@@ -8,6 +8,8 @@ import { PAGE_SIZE, buildOrderBy, buildWhere, filtersToQuery, hasActiveFilters, 
 import { issueRowSelect, projectLabels, projectMembers } from "@/lib/queries";
 import FilterBar from "@/components/issues/FilterBar";
 import IssueTable from "@/components/issues/IssueTable";
+import SavedViews from "@/components/issues/SavedViews";
+import AutoRefresh from "@/components/AutoRefresh";
 
 export const metadata: Metadata = { title: "Issues" };
 
@@ -17,7 +19,7 @@ export default async function IssuesPage({ params, searchParams }: PageProps<"/p
   const filters = parseFilters(await searchParams);
   const where = buildWhere(project.id, filters, user.id);
 
-  const [total, issues, members, labels] = await Promise.all([
+  const [total, issues, members, labels, views] = await Promise.all([
     prisma.issue.count({ where }),
     prisma.issue.findMany({
       where,
@@ -28,6 +30,11 @@ export default async function IssuesPage({ params, searchParams }: PageProps<"/p
     }),
     projectMembers(project.id),
     projectLabels(project.id),
+    prisma.savedView.findMany({
+      where: { projectId: project.id, userId: user.id },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, query: true },
+    }),
   ]);
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -36,7 +43,11 @@ export default async function IssuesPage({ params, searchParams }: PageProps<"/p
 
   return (
     <div className="flex flex-col">
-      <div className="flex flex-wrap items-center gap-2 px-4 pt-3 sm:px-6">
+      <AutoRefresh />
+      <div className="px-4 pt-3 sm:px-6">
+        <SavedViews projectId={project.id} basePath={base} views={views} currentQuery={filtersToQuery(filters, { page: 1 })} />
+      </div>
+      <div className="flex flex-wrap items-center gap-2 px-4 pt-2 sm:px-6">
         <FilterBar
           filters={filters}
           members={members.map((m) => m.user)}
