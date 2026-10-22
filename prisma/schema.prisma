@@ -1,58 +1,254 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Issue Logger v2 data model.
+// Projects own issues; users reach projects through ProjectMember roles.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-}
-enum Status {
-  OPEN
-  IN_PROGRESS
-  CLOSED
+  provider = "postgresql"
 }
 
-enum Priority {
+// ─── Enums ──────────────────────────────────────────────────────────
+
+enum ProjectRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum IssueStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELED
+}
+
+enum IssuePriority {
+  NONE
   LOW
   MEDIUM
   HIGH
-  CRITICAL
+  URGENT
 }
+
+enum IssueType {
+  BUG
+  FEATURE
+  TASK
+  INCIDENT
+}
+
+enum IssueSource {
+  MANUAL
+  API
+}
+
+enum ActivityKind {
+  CREATED
+  FIELD_CHANGED
+  COMMENTED
+  OCCURRED
+  REGRESSED
+}
+
+enum NotificationType {
+  ASSIGNED
+  COMMENTED
+  MENTIONED
+  STATUS_CHANGED
+  REGRESSED
+}
+
+enum TokenType {
+  EMAIL_VERIFY
+  PASSWORD_RESET
+}
+
+// ─── Accounts ───────────────────────────────────────────────────────
 
 model User {
-  id                           Int       @id @default(autoincrement())
-  name                         String
-  email                        String    @unique
-  passwordHash                 String
-  emailVerified                DateTime?
-  passwordResetToken           String?   @db.VarChar(255)
-  passwordResetTokenExpiresAt  DateTime?
-  createdAt                    DateTime  @default(now())
-  issues                       Issue[]
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  passwordHash  String
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  memberships    ProjectMember[]
+  assignedIssues Issue[]          @relation("IssueAssignee")
+  reportedIssues Issue[]          @relation("IssueReporter")
+  comments       Comment[]
+  activities     Activity[]
+  notifications  Notification[]   @relation("NotificationRecipient")
+  triggered      Notification[]   @relation("NotificationActor")
+  apiKeys        ApiKey[]
 }
 
-model VerificationToken {
+/// Single-use tokens for email verification and password reset.
+/// Only the SHA-256 hash is stored; the raw token lives in the emailed link.
+model AuthToken {
+  id         String    @id @default(cuid())
   identifier String
-  token      String   @unique
+  type       TokenType
+  tokenHash  String    @unique
   expires    DateTime
+  createdAt  DateTime  @default(now())
 
-  @@unique([identifier, token])
+  @@index([identifier, type])
 }
+
+// ─── Projects ───────────────────────────────────────────────────────
+
+model Project {
+  id           String   @id @default(cuid())
+  key          String   @unique @db.VarChar(6)
+  name         String   @db.VarChar(80)
+  description  String   @default("") @db.Text
+  color        String   @default("#6366f1") @db.VarChar(7)
+  issueCounter Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  members ProjectMember[]
+  issues  Issue[]
+  labels  Label[]
+  apiKeys ApiKey[]
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String
+  userId    String
+  role      ProjectRole @default(MEMBER)
+  createdAt DateTime    @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+model Label {
+  id        String @id @default(cuid())
+  projectId String
+  name      String @db.VarChar(32)
+  color     String @default("#64748b") @db.VarChar(7)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues  Issue[]
+
+  @@unique([projectId, name])
+}
+
+/// Project-scoped key for the ingestion API. Only a SHA-256 hash is stored.
+model ApiKey {
+  id          String    @id @default(cuid())
+  projectId   String
+  name        String    @db.VarChar(60)
+  prefix      String    @db.VarChar(16)
+  hashedKey   String    @unique
+  createdById String?
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdBy User?   @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+}
+
+// ─── Issues ─────────────────────────────────────────────────────────
 
 model Issue {
-  id          Int      @id @default(autoincrement())
-  title       String   @db.VarChar(255)
-  description String   @db.Text
-  status      Status   @default(OPEN)
-  priority    Priority @default(MEDIUM)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  userId      Int?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  id          String        @id @default(cuid())
+  projectId   String
+  number      Int
+  title       String        @db.VarChar(255)
+  description String        @default("") @db.Text
+  status      IssueStatus   @default(TODO)
+  priority    IssuePriority @default(NONE)
+  type        IssueType     @default(TASK)
+  /// Fractional sort key inside a board column; lower sorts first.
+  position    Float         @default(0)
+  assigneeId  String?
+  reporterId  String?
+  dueDate     DateTime?
+  estimate    Int?
+  source      IssueSource   @default(MANUAL)
+  /// Dedupe key for API-reported issues: repeat events bump `occurrences`.
+  fingerprint String?       @db.VarChar(64)
+  occurrences Int           @default(1)
+  lastSeenAt  DateTime?
+  environment String?       @db.VarChar(40)
+  closedAt    DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
-  @@index([userId])
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee      User?          @relation("IssueAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  reporter      User?          @relation("IssueReporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  labels        Label[]
+  comments      Comment[]
+  activities    Activity[]
+  notifications Notification[]
+
+  @@unique([projectId, number])
+  @@unique([projectId, fingerprint])
+  @@index([projectId, status, position])
+  @@index([assigneeId, status])
+  @@index([projectId, createdAt])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  issueId   String
+  authorId  String?
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  issue  Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([issueId, createdAt])
+}
+
+/// Append-only audit trail shown on the issue timeline.
+model Activity {
+  id        String       @id @default(cuid())
+  issueId   String
+  actorId   String?
+  kind      ActivityKind
+  field     String?      @db.VarChar(32)
+  fromValue String?
+  toValue   String?
+  createdAt DateTime     @default(now())
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([issueId, createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  actorId   String?
+  issueId   String
+  type      NotificationType
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  user  User  @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
 }

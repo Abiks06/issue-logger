@@ -1,246 +1,180 @@
 "use server";
 
-import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
-import { registerSchema } from "@/lib/validationSchemas";
-import { z } from "zod";
-import { sendMail } from "@/lib/mail";
+import { prisma } from "@/lib/db";
+import { ActionError, currentUser } from "@/lib/access";
+import { run, type ActionResult } from "@/lib/action";
+import { actionEmail, appUrl, mailConfigured, sendMail } from "@/lib/mail";
+import { randomToken, sha256 } from "@/lib/tokens";
+import { createRateLimiter } from "@/lib/rate-limit";
+import {
+  changePasswordSchema,
+  forgotPasswordSchema,
+  profileSchema,
+  registerSchema,
+  resetPasswordSchema,
+} from "@/lib/validation";
+import type { TokenType } from "@prisma/client";
 
-type RegisterData = z.infer<typeof registerSchema>;
+const HOUR = 60 * 60 * 1000;
+// Caps verification / reset emails per address so the forms can't be used to spam someone.
+const emailLimiter = createRateLimiter({ limit: 5, windowMs: HOUR });
 
-function createToken() {
-  return crypto.randomBytes(32).toString("hex");
+/** Replaces any outstanding token of this type and returns the raw value for the link. */
+async function issueToken(identifier: string, type: TokenType, ttlMs: number) {
+  const token = randomToken();
+  await prisma.$transaction([
+    prisma.authToken.deleteMany({ where: { identifier, type } }),
+    prisma.authToken.create({
+      data: { identifier, type, tokenHash: sha256(token), expires: new Date(Date.now() + ttlMs) },
+    }),
+  ]);
+  return token;
 }
 
-function buildUrl(path: string) {
-  const rawUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXTAUTH_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined) ||
-    "http://localhost:3000";
-  const baseUrl = rawUrl.replace(/\/+$/, "");
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return `${baseUrl}${cleanPath}`;
+/** Deletes and returns a valid token, so each link works exactly once. */
+async function consumeToken(token: string, type: TokenType) {
+  const record = await prisma.authToken.findUnique({ where: { tokenHash: sha256(token) } });
+  if (!record || record.type !== type) return null;
+  await prisma.authToken.delete({ where: { id: record.id } });
+  return record.expires > new Date() ? record : null;
 }
 
-export async function registerUser(data: RegisterData) {
-  const parsed = registerSchema.safeParse(data);
-  if (!parsed.success) {
-    const { fieldErrors } = parsed.error.flatten();
-    return { success: false, errors: fieldErrors };
-  }
-
-  const normalizedEmail = parsed.data.email.trim().toLowerCase();
-
-  const existing = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
+async function sendVerification(email: string, name: string) {
+  const token = await issueToken(email, "EMAIL_VERIFY", 24 * HOUR);
+  await sendMail({
+    to: email,
+    subject: "Verify your Issue Logger account",
+    html: actionEmail({
+      heading: "Welcome to Issue Logger",
+      greetingName: name,
+      body: "Confirm your email address to finish setting up your account. The link expires in 24 hours.",
+      cta: "Verify email",
+      url: appUrl(`/auth/verify?token=${token}`),
+    }),
   });
-  if (existing) {
-    return { success: false, errors: { email: ["An account with this email already exists."] } };
-  }
+}
 
-  const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-  const verificationToken = createToken();
+export async function registerUser(input: unknown): Promise<ActionResult<{ verified: boolean }>> {
+  return run(async () => {
+    const data = registerSchema.parse(input);
 
-  const isDev = process.env.NODE_ENV !== "production";
+    if (await prisma.user.findUnique({ where: { email: data.email } })) {
+      throw new ActionError("An account with this email already exists.");
+    }
 
-  const user = await prisma.user.create({
-    data: {
-      name: parsed.data.name,
-      email: normalizedEmail,
-      passwordHash,
-      emailVerified: isDev ? new Date() : null,
-    },
-  });
+    // Without a mail transport in development there is no way to receive the
+    // link, so local accounts are verified on creation.
+    const autoVerify = process.env.NODE_ENV !== "production" && !mailConfigured();
 
-  if (!user.emailVerified) {
-    await prisma.verificationToken.create({
+    const user = await prisma.user.create({
       data: {
-        identifier: normalizedEmail,
-        token: verificationToken,
-        expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
+        name: data.name,
+        email: data.email,
+        passwordHash: await bcrypt.hash(data.password, 12),
+        emailVerified: autoVerify ? new Date() : null,
       },
     });
-  }
 
-  try {
-    await sendMail({
-      to: normalizedEmail,
-      subject: "Verify your Issue Logger account",
-      html: `
-        <div style="font-family:Arial,sans-serif;line-height:1.5">
-          <h2>Welcome to Issue Logger</h2>
-          <p>Hi ${parsed.data.name},</p>
-          <p>Please verify your account by clicking the link below:</p>
-          <p><a href="${buildUrl(`/auth/verify?token=${verificationToken}`)}">Verify account</a></p>
-          <p>If you didn't create this account, you can ignore this email.</p>
-        </div>
-      `,
-    });
-  } catch (error: any) {
-    console.error("Failed to send verification email:", error);
-    // Rollback user creation
-    await prisma.user.delete({ where: { id: user.id } }).catch(console.error);
-    if (!user.emailVerified) {
-      await prisma.verificationToken.delete({ where: { token: verificationToken } }).catch(console.error);
+    if (!autoVerify) {
+      try {
+        await sendVerification(user.email, user.name);
+      } catch (err) {
+        console.error("Failed to send verification email", err);
+        await prisma.user.delete({ where: { id: user.id } }).catch(() => {});
+        throw new ActionError("We couldn't send the verification email. Check the mail configuration and try again.");
+      }
     }
-    const errMsg = error?.message || "";
-    if (errMsg.includes("403") || errMsg.includes("testing mode") || errMsg.includes("only send to your own")) {
-      return {
-        success: false,
-        errors: {
-          email: [
-            "Resend free tier only permits sending emails to your account owner email address. Please switch to Gmail SMTP or Brevo in Vercel environment variables.",
-          ],
-        },
-      };
-    }
-    return {
-      success: false,
-      errors: {
-        email: ["Failed to send verification email. Please check your SMTP / Resend environment configuration."],
-      },
-    };
-  }
 
-  return { success: true, message: "Confirmation email sent!" };
+    return { verified: autoVerify };
+  });
 }
 
-export async function verifyEmail(token: string) {
-  const verificationToken = await prisma.verificationToken.findUnique({
-    where: { token },
+export async function verifyEmail(token: string): Promise<ActionResult> {
+  return run(async () => {
+    const record = await consumeToken(token, "EMAIL_VERIFY");
+    if (!record) throw new ActionError("This verification link is invalid or has expired.");
+    await prisma.user.update({ where: { email: record.identifier }, data: { emailVerified: new Date() } });
+    return undefined;
   });
-
-  if (!verificationToken || verificationToken.expires < new Date()) {
-    return { success: false, message: "Invalid or expired verification link." };
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { email: verificationToken.identifier },
-  });
-
-  if (!user) return { success: false, message: "User not found." };
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      emailVerified: new Date(),
-    },
-  });
-
-  await prisma.verificationToken.delete({
-    where: { token },
-  });
-
-  return { success: true, message: "Email verified successfully." };
 }
 
-export async function resendVerificationEmail(email: string) {
-  const normalizedEmail = email.trim().toLowerCase();
-  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-  if (!user) {
-    return { success: true };
-  }
-
-  // Delete any existing tokens for this email
-  await prisma.verificationToken.deleteMany({
-    where: { identifier: normalizedEmail },
+export async function resendVerificationEmail(input: unknown): Promise<ActionResult> {
+  return run(async () => {
+    const { email } = forgotPasswordSchema.parse(input);
+    if (!emailLimiter(`verify:${email}`).ok) throw new ActionError("Too many requests. Try again later.");
+    const user = await prisma.user.findUnique({ where: { email } });
+    // Same response whether or not the account exists.
+    if (user && !user.emailVerified) await sendVerification(user.email, user.name);
+    return undefined;
   });
+}
 
-  const token = createToken();
-  const expires = new Date(Date.now() + 1000 * 60 * 60 * 24);
+export async function requestPasswordReset(input: unknown): Promise<ActionResult> {
+  return run(async () => {
+    const { email } = forgotPasswordSchema.parse(input);
+    if (!emailLimiter(`reset:${email}`).ok) throw new ActionError("Too many requests. Try again later.");
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return undefined;
 
-  await prisma.verificationToken.create({
-    data: {
-      identifier: normalizedEmail,
-      token,
-      expires,
-    },
-  });
-
-  try {
+    const token = await issueToken(email, "PASSWORD_RESET", HOUR);
     await sendMail({
-      to: normalizedEmail,
-      subject: "Verify your Issue Logger account",
-      html: `
-        <div style="font-family:Arial,sans-serif;line-height:1.5">
-          <h2>Verify your email</h2>
-          <p>Hi ${user.name},</p>
-          <p>Click the link below to verify your account:</p>
-          <p><a href="${buildUrl(`/auth/verify?token=${token}`)}">Verify account</a></p>
-          <p>If you didn't request this, you can ignore this email.</p>
-        </div>
-      `,
-    });
-  } catch (error) {
-    console.error("Failed to send verification email:", error);
-    return { success: false, message: "Failed to send verification email. Please try again later." };
-  }
-
-  return { success: true, message: "Verification email sent!" };
-}
-
-export async function requestPasswordReset(email: string) {
-  const normalized = email.trim().toLowerCase();
-  const user = await prisma.user.findUnique({ where: { email: normalized } });
-
-  if (!user) {
-    return { success: true };
-  }
-
-  const token = createToken();
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      passwordResetToken: token,
-      passwordResetTokenExpiresAt: new Date(Date.now() + 1000 * 60 * 60),
-    },
-  });
-
-  try {
-    await sendMail({
-      to: normalized,
+      to: email,
       subject: "Reset your Issue Logger password",
-      html: `
-        <div style="font-family:Arial,sans-serif;line-height:1.5">
-          <h2>Reset your password</h2>
-          <p>Hi ${user.name},</p>
-          <p>Use the link below to choose a new password:</p>
-          <p><a href="${buildUrl(`/auth/reset-password?token=${token}`)}">Reset password</a></p>
-          <p>If you didn't request this, you can ignore this email.</p>
-        </div>
-      `,
+      html: actionEmail({
+        heading: "Reset your password",
+        greetingName: user.name,
+        body: "Use the button below to choose a new password. The link expires in one hour.",
+        cta: "Reset password",
+        url: appUrl(`/auth/reset-password?token=${token}`),
+      }),
     });
-  } catch (error) {
-    console.error("Failed to send password reset email:", error);
-    return { success: false, message: "Failed to send password reset email. Please try again later." };
-  }
-
-  return { success: true, message: "Password reset email sent!" };
+    return undefined;
+  });
 }
 
-export async function resetPassword(token: string, password: string) {
-  const user = await prisma.user.findFirst({
-    where: {
-      passwordResetToken: token,
-      passwordResetTokenExpiresAt: { gt: new Date() },
-    },
+export async function resetPassword(token: string, input: unknown): Promise<ActionResult> {
+  return run(async () => {
+    const data = resetPasswordSchema.parse(input);
+    const record = await consumeToken(token, "PASSWORD_RESET");
+    if (!record) throw new ActionError("This reset link is invalid or has expired.");
+    const user = await prisma.user.findUnique({ where: { email: record.identifier } });
+    if (!user) throw new ActionError("This reset link is invalid or has expired.");
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash: await bcrypt.hash(data.password, 12),
+        // Receiving the reset email proves ownership of the address.
+        emailVerified: user.emailVerified ?? new Date(),
+      },
+    });
+    return undefined;
   });
+}
 
-  if (!user) return { success: false, message: "Invalid or expired reset link." };
-
-  const passwordHash = await bcrypt.hash(password, 12);
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      passwordHash,
-      emailVerified: user.emailVerified || new Date(),
-      passwordResetToken: null,
-      passwordResetTokenExpiresAt: null,
-    },
+export async function updateProfile(input: unknown): Promise<ActionResult> {
+  return run(async () => {
+    const user = await currentUser();
+    if (!user) throw new ActionError("You need to sign in again.");
+    const data = profileSchema.parse(input);
+    await prisma.user.update({ where: { id: user.id }, data: { name: data.name } });
+    return undefined;
   });
+}
 
-  return { success: true, message: "Password updated successfully." };
+export async function changePassword(input: unknown): Promise<ActionResult> {
+  return run(async () => {
+    const user = await currentUser();
+    if (!user) throw new ActionError("You need to sign in again.");
+    const data = changePasswordSchema.parse(input);
+    const row = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    if (!(await bcrypt.compare(data.currentPassword, row.passwordHash))) {
+      throw new ActionError("Your current password is incorrect.");
+    }
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await bcrypt.hash(data.password, 12) },
+    });
+    return undefined;
+  });
 }

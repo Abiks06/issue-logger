@@ -1,26 +1,24 @@
 {
   "name": "issue-logger",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate",
-    "clear-db": "node scripts/clear-db.js"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.4.0",
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.8.0",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/nodemailer": "^8.0.1",
-    "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
-    "classnames": "^2.5.1",
-    "easymde": "^2.21.0",
-    "framer-motion": "^13.1.0",
     "lucide-react": "^1.31.0",
     "next": "16.2.10",
     "next-auth": "^5.0.0-beta.32",
@@ -30,23 +28,29 @@
     "prisma": "^7.8.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-hook-form": "^7.82.0",
     "react-hot-toast": "^2.6.0",
     "react-markdown": "^10.1.0",
-    "react-simplemde-editor": "^5.2.0",
     "remark-gfm": "^4.0.1",
+    "server-only": "^0.0.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^24.19.2",
+    "@types/nodemailer": "^8.0.1",
     "@types/pg": "^8.20.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
+    "dotenv": "^18.0.8",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vitest": "^5.0.5"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
