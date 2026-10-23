@@ -37,6 +37,9 @@ export default function LoginForm({ next, notice }: { next: string; notice: stri
         router.refresh();
       } else if (code.includes("EMAIL_NOT_VERIFIED")) {
         setUnverifiedEmail(parsed.data.email);
+      } else if (result.error === "Configuration") {
+        // Auth.js reports unexpected server errors (e.g. the database is down) this way.
+        setError("Sign-in is unavailable right now: the server couldn't reach its database. Try again in a moment.");
       } else if (code.includes("TOO_MANY_ATTEMPTS")) {
         setError("Too many sign-in attempts. Wait a few minutes and try again.");
       } else {
