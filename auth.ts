@@ -29,6 +29,24 @@ const loginLimiter = createRateLimiter({ limit: 10, windowMs: 15 * 60_000 });
 // which addresses have accounts.
 const DUMMY_HASH = "$2b$12$IU1U5wUoXGXpJ4QWUTjgKOmwU9H44T5kxhZf7pYWA1SvELhG9oUoS";
 
+/**
+ * App-specific cookie names. Browsers share cookies across ports, so with
+ * Auth.js's default names any other Auth.js app on the same host (another
+ * project on localhost:3000, say) fails to decrypt our session and deletes it.
+ */
+function appCookies() {
+  const appUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const secure = appUrl.startsWith("https://") || Boolean(process.env.VERCEL);
+  const prefix = secure ? "__Secure-" : "";
+  const options = { httpOnly: true, sameSite: "lax" as const, path: "/", secure };
+  return {
+    sessionToken: { name: `${prefix}issue-logger.session-token`, options },
+    callbackUrl: { name: `${prefix}issue-logger.callback-url`, options },
+    // The CSRF cookie must use __Host- on HTTPS (no Domain attribute is set).
+    csrfToken: { name: `${secure ? "__Host-" : ""}issue-logger.csrf-token`, options },
+  };
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: {
     strategy: "jwt",
@@ -36,6 +54,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     maxAge: SESSION_MAX_AGE_SECONDS,
   },
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  cookies: appCookies(),
   pages: {
     signIn: "/auth/login",
     error: "/auth/login",
@@ -82,11 +101,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       token.lastSeen = now;
 
       if (needsRecheck(token, now)) {
+        let current: { name: string; sessionVersion: number } | null;
+        try {
+          current = await prisma.user.findUnique({
+            where: { id: token.id },
+            select: { name: true, sessionVersion: true },
+          });
+        } catch (err) {
+          // A database blip must not sign the user out (Auth.js clears the
+          // cookie when this callback throws); retry on the next request.
+          console.error("Session recheck failed; keeping the session for now", err);
+          return token;
+        }
         // Revoked (password changed, signed out everywhere) or deleted users lose the session.
-        const current = await prisma.user.findUnique({
-          where: { id: token.id },
-          select: { name: true, sessionVersion: true },
-        });
         if (!current || current.sessionVersion !== (token.sv ?? 0)) return null;
         token.name = current.name;
         token.checkedAt = now;
