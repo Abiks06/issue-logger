@@ -6,6 +6,7 @@ vi.mock("@/auth", () => ({ auth: (fn: unknown) => fn }));
 const { isPublicApi } = await import("@/proxy");
 
 const good = {
+  VERCEL: "1",
   DATABASE_URL: "postgresql://u:p@localhost:5432/db",
   AUTH_SECRET: "x".repeat(40),
   NEXT_PUBLIC_APP_URL: "https://issues.example.com",
@@ -37,6 +38,11 @@ describe("validateEnv", () => {
     expect(validateEnv(short, false).warnings).toContain("AUTH_SECRET should be at least 32 characters");
   });
 
+  it("warns about untrusted hosts outside Vercel", () => {
+    expect(validateEnv({ ...good, VERCEL: undefined }, true).warnings.join()).toMatch(/AUTH_TRUST_HOST/);
+    expect(validateEnv({ ...good, VERCEL: undefined, AUTH_TRUST_HOST: "true" }, true).warnings).toEqual([]);
+  });
+
   it("warns when production can't send email", () => {
     const noMail = { ...good, RESEND_API_KEY: undefined };
     expect(validateEnv(noMail, true).warnings.join()).toMatch(/No mail transport/);
@@ -49,6 +55,7 @@ describe("isPublicApi", () => {
     expect(isPublicApi("/api/v1/events")).toBe(true);
     expect(isPublicApi("/api/cron/sla")).toBe(true);
     expect(isPublicApi("/api/session/reset")).toBe(true);
+    expect(isPublicApi("/api/health")).toBe(true);
     expect(isPublicApi("/api/projects/WEB/export")).toBe(false);
     expect(isPublicApi("/api/v1")).toBe(true);
     expect(isPublicApi("/api/v10/events")).toBe(false);

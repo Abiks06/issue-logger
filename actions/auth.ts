@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { headers } from "next/headers";
 import { auth, signIn } from "@/auth";
 import { ActionError, currentUser } from "@/lib/access";
 import { acceptPendingInvites } from "@/lib/invites";
@@ -22,6 +23,14 @@ import type { TokenType } from "@prisma/client";
 const HOUR = 60 * 60 * 1000;
 // Caps verification / reset emails per address so the forms can't be used to spam someone.
 const emailLimiter = createSharedRateLimiter({ name: "auth-email", limit: 5, windowMs: HOUR });
+// Caps sign-ups per client address so the form can't be used to mass-create accounts.
+const signupLimiter = createSharedRateLimiter({ name: "signup", limit: 10, windowMs: HOUR });
+
+/** Client IP as reported by the platform proxy (first x-forwarded-for hop). */
+async function clientIp() {
+  const h = await headers();
+  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "unknown";
+}
 
 /** Replaces any outstanding token of this type and returns the raw value for the link. */
 async function issueToken(identifier: string, type: TokenType, ttlMs: number) {
@@ -61,6 +70,7 @@ async function sendVerification(email: string, name: string) {
 export async function registerUser(input: unknown): Promise<ActionResult<{ verified: boolean }>> {
   return run(async () => {
     const data = registerSchema.parse(input);
+    if (!(await signupLimiter(await clientIp())).ok) throw new ActionError("Too many sign-ups from your network. Try again later.");
 
     if (await prisma.user.findUnique({ where: { email: data.email } })) {
       throw new ActionError("An account with this email already exists.");

@@ -43,6 +43,10 @@ export function validateEnv(source: Record<string, string | undefined>, producti
   if (production && !env.RESEND_API_KEY && !env.SMTP_HOST) {
     warnings.push("No mail transport (RESEND_API_KEY or SMTP_HOST); sign-up verification and invites can't be emailed");
   }
+  // Auth.js trusts the Host header automatically only on Vercel.
+  if (production && !env.VERCEL && env.AUTH_TRUST_HOST !== "true") {
+    warnings.push("AUTH_TRUST_HOST=true is needed outside Vercel (behind a proxy that sets Host), or sign-in will fail");
+  }
   if (env.CRON_SECRET && env.CRON_SECRET.length < 16) warnings.push("CRON_SECRET should be at least 16 characters");
 
   return { errors, warnings };

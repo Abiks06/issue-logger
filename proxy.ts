@@ -4,10 +4,10 @@ import { NextResponse } from "next/server";
 /**
  * API routes that authenticate themselves instead of using the session:
  * Auth.js's own endpoints, the API-key ingestion API, the secret-protected cron
- * hook, and the stale-session reset. Every other /api route needs a session,
+ * hook, the stale-session reset and the health check. Every other /api route needs a session,
  * so a new route is private unless it's added here deliberately.
  */
-const PUBLIC_API_PREFIXES = ["/api/auth/", "/api/v1/", "/api/cron/", "/api/session/reset"];
+const PUBLIC_API_PREFIXES = ["/api/auth/", "/api/v1/", "/api/cron/", "/api/session/reset", "/api/health"];
 
 export function isPublicApi(pathname: string) {
   return PUBLIC_API_PREFIXES.some((p) => pathname === p.replace(/\/$/, "") || pathname.startsWith(p));
