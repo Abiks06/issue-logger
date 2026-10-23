@@ -30,9 +30,11 @@ v1 was a single-user list of issues. v2 rebuilds it around teams and automation:
 - **SLA tracking.** Response and resolution targets per priority (sensible defaults on every new project, editable under Settings → Workflow). Each issue shows both clocks; cards and rows flag issues at risk (last 25% of the window) or breached; the list can filter by SLA state; Insights reports hit rates per priority. Response stops when work starts or someone other than the reporter comments; resolution stops at Done. Clocks run on wall-clock time.
 - **SLA alerts.** Assignees (or project admins, for unassigned work) get an Inbox alert when an issue goes at risk and again when it breaches. Changing targets re-baselines silently, so turning SLAs on doesn't alert on the whole backlog.
 - **Velocity.** Estimate points completed per week over the last 12 weeks, a 4-week rolling average, and a forecast of how long the open estimated backlog will take. No sprints required.
+- **Board totals.** Each column header shows its estimate points.
 - **WIP limits.** Optional per-column limits on the board. A column at its limit turns amber, over it turns red, and moving work into a full column shows a warning (moves aren't blocked).
+- **Issue preview.** Click an issue in the list to open it in a side panel and change status, priority or assignee without leaving the list (Ctrl/Cmd-click or Enter opens the full page; `p` toggles the preview).
 - **Inbox.** Notifications for assignments, mentions, comments on issues you reported or own, status changes and regressions. Opening an issue clears its notifications.
-- **Insights.** Created-vs-resolved chart for the last 30 days, net flow, median time to resolve, overdue count, breakdowns by status, priority and assignee, and the most frequent reported errors.
+- **Insights.** A priority × status heatmap of open work (each cell links to the matching list), a breakdown by issue type, the created-vs-resolved chart for the last 30 days, net flow, median time to resolve, overdue count, breakdowns by status, priority and assignee, and the most frequent reported errors.
 - **My work.** Everything assigned to you across projects, grouped by status, with overdue and due-this-week counts and recent activity.
 - **Ingestion API.** See below.
 - **Accounts.** Email/password sign-up with email verification, password reset, profile and password change. Sessions last 30 days from your last visit (or 12 hours idle if you untick "Keep me signed in"), and "Sign out other devices" or a password change revokes every other session.
@@ -138,7 +140,19 @@ Alerts are swept at most once a minute after page loads. For alerts while nobody
 
 ## Upgrading from v1
 
-v2 replaces the data model (string ids, projects, members, new status and priority values), and v1's migration history no longer matched its own schema. The repository now has a single baseline migration, so an existing v1 database needs to be reset rather than migrated in place. Export anything you want to keep first.
+v2 doesn't upgrade a v1 database in place (see [docs/DECISIONS.md](docs/DECISIONS.md), decisions 1 and 13). Instead, deploy v2 to a new database and copy your v1 data across. The v1 database is only read, so it stays as a backup.
+
+```bash
+npx prisma migrate deploy                                   # create the v2 schema in the new database
+npm run migrate:v1 -- --source "postgresql://…v1…" --dry-run   # preview what will be imported
+npm run migrate:v1 -- --source "postgresql://…v1…"             # import
+```
+
+- Every v1 account comes across with the same email and password.
+- v1 issues were private to their author, so each user gets a private project they own (they can invite others afterwards).
+- Statuses map Open → Todo, In progress → In progress, Closed → Done; priority Critical becomes Urgent.
+- Issues whose author was deleted are skipped unless you pass `--orphans-to owner@example.com`.
+- The script refuses to run twice into the same v2 database.
 
 ## Security notes
 
@@ -147,4 +161,6 @@ v2 replaces the data model (string ids, projects, members, new status and priori
 - Email verification and password reset tokens are single-use, expire, and are stored as SHA-256 hashes. Verification needs a click, so mail scanners can't consume the link.
 - API keys are stored as hashes, can be revoked, and are rate-limited. CSV export neutralises spreadsheet formulas.
 - The migration enables Row Level Security with no policies on every table. The app connects as the table owner and is unaffected; on Supabase this closes the tables to the public REST roles.
-- Rate limiting is in-process memory; on a multi-instance deployment, back it with Redis or similar.
+- Login, email and API rate limits are stored in Postgres (keys hashed), so they hold across every server instance.
+- API routes are private by default: the proxy rejects signed-out requests except for the self-authenticating routes listed in `proxy.ts`.
+- The server checks its environment at startup and refuses to start in production with missing or malformed required settings.

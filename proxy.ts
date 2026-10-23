@@ -1,15 +1,29 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
+/**
+ * API routes that authenticate themselves instead of using the session:
+ * Auth.js's own endpoints, the API-key ingestion API, the secret-protected cron
+ * hook, and the stale-session reset. Every other /api route needs a session,
+ * so a new route is private unless it's added here deliberately.
+ */
+const PUBLIC_API_PREFIXES = ["/api/auth/", "/api/v1/", "/api/cron/", "/api/session/reset"];
+
+export function isPublicApi(pathname: string) {
+  return PUBLIC_API_PREFIXES.some((p) => pathname === p.replace(/\/$/, "") || pathname.startsWith(p));
+}
+
 export const proxy = auth((req) => {
   const { nextUrl, auth: session } = req;
   const isLoggedIn = !!session?.user;
+  const path = nextUrl.pathname;
 
-  const isAuthRoute = nextUrl.pathname.startsWith("/auth");
-  const isApiAuth = nextUrl.pathname.startsWith("/api/auth");
+  if (path.startsWith("/api/")) {
+    if (isPublicApi(path) || isLoggedIn) return NextResponse.next();
+    return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+  }
 
-  // Always allow NextAuth API routes
-  if (isApiAuth) return NextResponse.next();
+  const isAuthRoute = path.startsWith("/auth");
 
   // Redirect authenticated users away from login/register
   if (isAuthRoute && isLoggedIn) {
@@ -19,7 +33,7 @@ export const proxy = auth((req) => {
   // Redirect unauthenticated users from protected routes to login
   if (!isAuthRoute && !isLoggedIn) {
     const loginUrl = new URL("/auth/login", nextUrl);
-    loginUrl.searchParams.set("callbackUrl", nextUrl.pathname);
+    loginUrl.searchParams.set("callbackUrl", path);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -27,5 +41,5 @@ export const proxy = auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };

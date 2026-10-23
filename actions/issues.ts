@@ -12,7 +12,7 @@ import { assertProjectRefs, closedAtFor, insertIssue, notify, topPosition } from
 import { commentSchema, issuePatchSchema, issueSchema } from "@/lib/validation";
 import { PRIORITIES, STATUSES, issueKey, type Role, type Status } from "@/lib/constants";
 import { parseIssueKey } from "@/lib/issue-filters";
-import { isResponse } from "@/lib/sla";
+import { evaluateSla, isResponse, targetsFromRows } from "@/lib/sla";
 
 function refresh(projectKey: string, number?: number) {
   revalidatePath(`/projects/${projectKey}`, "layout");
@@ -384,3 +384,52 @@ export async function markNotificationsRead(ids: string[] | "all"): Promise<Acti
     return undefined;
   });
 }
+
+// ─── Preview pane ─────────────────────────────────────────────────────
+
+/** Everything the list's side preview shows for one issue. */
+export async function getIssuePreview(issueId: string) {
+  return run(async () => {
+    const issue = await prisma.issue.findUnique({
+      where: { id: issueId },
+      include: {
+        assignee: { select: { id: true, name: true } },
+        reporter: { select: { name: true } },
+        labels: { select: { id: true, name: true, color: true }, orderBy: { name: "asc" } },
+        children: { select: { status: true } },
+        comments: {
+          orderBy: { createdAt: "desc" },
+          take: 3,
+          select: { id: true, body: true, createdAt: true, author: { select: { name: true } } },
+        },
+        _count: { select: { comments: true } },
+      },
+    });
+    if (!issue) throw new ActionError("Issue not found.");
+    await authorizeProject(issue.projectId, "project:view");
+    const targets = await prisma.slaTarget.findMany({ where: { projectId: issue.projectId } });
+    return {
+      id: issue.id,
+      number: issue.number,
+      title: issue.title,
+      description: issue.description,
+      status: issue.status as Status,
+      priority: issue.priority,
+      type: issue.type,
+      assigneeId: issue.assigneeId,
+      assigneeName: issue.assignee?.name ?? null,
+      reporterName: issue.reporter?.name ?? null,
+      labels: issue.labels,
+      dueDate: issue.dueDate,
+      estimate: issue.estimate,
+      createdAt: issue.createdAt,
+      updatedAt: issue.updatedAt,
+      children: { total: issue.children.length, done: issue.children.filter((c) => c.status === "DONE" || c.status === "CANCELED").length },
+      comments: issue.comments.reverse(),
+      commentCount: issue._count.comments,
+      sla: evaluateSla(issue, targetsFromRows(targets)),
+    };
+  });
+}
+
+export type IssuePreviewData = Extract<Awaited<ReturnType<typeof getIssuePreview>>, { ok: true }>["data"];

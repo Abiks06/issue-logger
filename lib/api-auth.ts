@@ -2,13 +2,13 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { bearerToken, sha256 } from "@/lib/tokens";
-import { createRateLimiter } from "@/lib/rate-limit";
+import { createSharedRateLimiter, type LimitResult } from "@/lib/shared-rate-limit";
 
 // API-key authentication for /api/v1. Keys are project-scoped.
 
-const limiter = createRateLimiter({ limit: 120, windowMs: 60_000 });
+const limiter = createSharedRateLimiter({ name: "api", limit: 120, windowMs: 60_000 });
 
-type Limit = ReturnType<typeof limiter>;
+type Limit = LimitResult;
 
 export function rateLimitHeaders(limit: Limit) {
   return {
@@ -28,7 +28,7 @@ export async function authenticateApiKey(request: Request) {
   }
 
   const hashedKey = sha256(token);
-  const limit = limiter(hashedKey);
+  const limit = await limiter(hashedKey);
   if (!limit.ok) {
     return {
       ok: false as const,

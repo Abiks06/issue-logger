@@ -10,6 +10,7 @@ import type { IssueRow } from "@/lib/queries";
 import { isOverdue } from "@/lib/analytics";
 import { evaluateSla, type SlaTargets } from "@/lib/sla";
 import { SlaBadge } from "@/components/issues/SlaBadge";
+import IssuePreview from "@/components/issues/IssuePreview";
 import type { IssueKind, Priority, Status } from "@/lib/constants";
 import { Avatar, EmptyState, LabelChip, TimeAgo, shortDate } from "@/components/ui/bits";
 import { PriorityIcon, StatusIcon, TypeIcon } from "@/components/ui/icons";
@@ -36,6 +37,9 @@ export default function IssueTable({ projectId, projectKey, issues, members, meI
   const [selected, setSelected] = useState<Set<string>>(new Set());
   // Keyboard cursor: j/k (or arrows) move, x selects, Enter opens.
   const [cursor, setCursor] = useState(-1);
+  // Issue shown in the side preview; plain clicks on a title open it here.
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const previewRow = issues.find((i) => i.id === previewId) ?? null;
 
   const allSelected = issues.length > 0 && selected.size === issues.length;
   const toggle = (id: string) =>
@@ -66,12 +70,16 @@ export default function IssueTable({ projectId, projectKey, issues, members, meI
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
+      // A picker that handled the key (e.g. Enter to choose) closes before this
+      // runs, so check defaultPrevented rather than whether a menu is open.
+      if (e.defaultPrevented || el.closest?.('[aria-label="Issue preview"]')) return;
       if (e.metaKey || e.ctrlKey || e.altKey || el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName)) return;
       if (document.querySelector("dialog[open], [role=listbox], [role=dialog]")) return;
       const max = issues.length - 1;
       if (e.key === "j" || e.key === "ArrowDown") setCursor((c) => Math.min(max, c + 1));
       else if (e.key === "k" || e.key === "ArrowUp") setCursor((c) => Math.max(0, c - 1));
       else if (e.key === "x" && cursor >= 0 && canEdit) toggle(issues[cursor].id);
+      else if ((e.key === "p" || e.key === " ") && cursor >= 0) setPreviewId((id) => (id === issues[cursor].id ? null : issues[cursor].id));
       else if (e.key === "Enter" && cursor >= 0) router.push(`/projects/${projectKey}/issues/${issues[cursor].number}`);
       else if (e.key === "Escape" && selected.size) setSelected(new Set());
       else return;
@@ -96,7 +104,7 @@ export default function IssueTable({ projectId, projectKey, issues, members, meI
   }
 
   return (
-    <div className="relative px-4 pb-4 pt-3 sm:px-6">
+    <div className={`relative px-4 pb-4 pt-3 sm:px-6 ${previewRow ? "xl:pr-[460px]" : ""}`}>
       <div className="card overflow-hidden">
         <div className="flex h-9 items-center gap-3 border-b border-line bg-surface-2/50 px-3 text-xs text-faint">
           {canEdit && (
@@ -110,7 +118,7 @@ export default function IssueTable({ projectId, projectKey, issues, members, meI
           )}
           <span>{total} {total === 1 ? "issue" : "issues"}</span>
           <span className="ml-auto hidden items-center gap-1 lg:flex">
-            <span className="kbd">J</span><span className="kbd">K</span> move <span className="kbd ml-1">X</span> select <span className="kbd ml-1">↵</span> open
+            <span className="kbd">J</span><span className="kbd">K</span> move <span className="kbd ml-1">P</span> preview <span className="kbd ml-1">X</span> select <span className="kbd ml-1">↵</span> open
           </span>
         </div>
         <ul>
@@ -123,7 +131,7 @@ export default function IssueTable({ projectId, projectKey, issues, members, meI
                 key={issue.id}
                 data-row={index}
                 onMouseEnter={() => setCursor(index)}
-                className={`group relative flex items-center gap-3 border-b border-line px-3 py-2 last:border-0 hover:bg-surface-2/60 ${checked ? "bg-accent-soft" : ""} ${cursor === index ? "bg-surface-2/60 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-accent" : ""}`}
+                className={`group relative flex items-center gap-3 border-b border-line px-3 py-2 last:border-0 hover:bg-surface-2/60 ${checked || previewId === issue.id ? "bg-accent-soft" : ""} ${cursor === index ? "bg-surface-2/60 before:absolute before:inset-y-0 before:left-0 before:w-0.5 before:bg-accent" : ""}`}
               >
                 {canEdit && (
                   <input
@@ -139,6 +147,14 @@ export default function IssueTable({ projectId, projectKey, issues, members, meI
                 <StatusIcon status={issue.status as Status} />
                 <Link
                   href={`/projects/${projectKey}/issues/${issue.number}`}
+                  onClick={(e) => {
+                    // Plain click previews; Ctrl/Cmd/middle-click still open the full page.
+                    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                    e.preventDefault();
+                    setCursor(index);
+                    setPreviewId(issue.id);
+                  }}
+                  aria-current={previewId === issue.id ? "true" : undefined}
                   className={`min-w-0 flex-1 truncate text-[13px] font-medium hover:text-accent ${issue.status === "CANCELED" ? "text-faint line-through" : ""}`}
                 >
                   {issue.title}
@@ -172,6 +188,18 @@ export default function IssueTable({ projectId, projectKey, issues, members, meI
           })}
         </ul>
       </div>
+
+      {previewRow && (
+        <IssuePreview
+          issueId={previewRow.id}
+          version={previewRow.updatedAt.getTime()}
+          projectKey={projectKey}
+          members={members}
+          meId={meId}
+          canEdit={canEdit}
+          onClose={() => setPreviewId(null)}
+        />
+      )}
 
       {selected.size > 0 && (
         <div

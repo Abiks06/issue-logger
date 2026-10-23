@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireProject } from "@/lib/access";
 import { projectMembers, projectSlaTargets } from "@/lib/queries";
 import { countBy, formatDuration, isOverdue, medianResolutionHours, throughput } from "@/lib/analytics";
-import { OPEN_STATUSES, PRIORITIES, PRIORITY_META, STATUSES, STATUS_META, issueKey, type Priority, type Status } from "@/lib/constants";
+import { OPEN_STATUSES, PRIORITIES, PRIORITY_META, STATUSES, STATUS_META, TYPES, TYPE_META, issueKey, type IssueKind, type Priority, type Status } from "@/lib/constants";
 import ThroughputChart from "@/components/charts/ThroughputChart";
 import VelocityChart from "@/components/charts/VelocityChart";
 import { evaluateSla, formatDuration as formatSlaDuration, hitRate } from "@/lib/sla";
@@ -13,7 +13,8 @@ import { averageVelocity, forecastWeeks, weeklyVelocity } from "@/lib/velocity";
 import BarList from "@/components/charts/BarList";
 import StatTile from "@/components/charts/StatTile";
 import { Avatar, TimeAgo } from "@/components/ui/bits";
-import { PriorityIcon, StatusIcon } from "@/components/ui/icons";
+import { PriorityIcon, StatusIcon, TypeIcon } from "@/components/ui/icons";
+import Heatmap from "@/components/charts/Heatmap";
 
 export const metadata: Metadata = { title: "Insights" };
 
@@ -26,7 +27,7 @@ export default async function InsightsPage({ params }: PageProps<"/projects/[key
   const [facts, members, recurring, slaTargets] = await Promise.all([
     prisma.issue.findMany({
       where: { projectId: project.id },
-      select: { createdAt: true, closedAt: true, status: true, priority: true, assigneeId: true, dueDate: true, estimate: true, firstResponseAt: true },
+      select: { createdAt: true, closedAt: true, status: true, priority: true, type: true, assigneeId: true, dueDate: true, estimate: true, firstResponseAt: true },
     }),
     projectMembers(project.id),
     prisma.issue.findMany({
@@ -47,6 +48,7 @@ export default async function InsightsPage({ params }: PageProps<"/projects/[key
   const byStatus = countBy(facts, (f) => f.status as Status);
   const byPriority = countBy(open, (f) => f.priority as Priority);
   const byAssignee = countBy(open, (f) => f.assigneeId ?? "none");
+  const byType = countBy(open, (f) => f.type as IssueKind);
 
   // SLA: hit rates over clocks that stopped in the window; live counts for open work.
   const windowStart = now.getTime() - WINDOW * 86_400_000;
@@ -135,7 +137,19 @@ export default async function InsightsPage({ params }: PageProps<"/projects/[key
         <VelocityChart weeks={weeks} average={avg} />
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-3">
+      <section className="card p-4 sm:p-5" aria-labelledby="heatmap-heading">
+        <h2 id="heatmap-heading" className="mb-1 text-[13px] font-semibold">Open work · priority × status</h2>
+        <p className="mb-3 text-xs text-muted">Where the open work sits. Select a cell to see those issues.</p>
+        <Heatmap
+          caption="Open issues by priority and status"
+          rows={PRIORITIES.map((p) => ({ key: p, label: <span className="inline-flex items-center gap-1.5"><PriorityIcon priority={p} />{PRIORITY_META[p].label}</span> }))}
+          columns={OPEN_STATUSES.map((st) => ({ key: st, label: STATUS_META[st].label }))}
+          value={(p, st) => open.filter((f) => f.priority === p && f.status === st).length}
+          href={(p, st) => `${listBase}?status=${st}&priority=${p}`}
+        />
+      </section>
+
+      <div className="grid gap-4 xl:grid-cols-2">
         <section className="card p-4 sm:p-5">
           <h2 className="mb-4 text-[13px] font-semibold">All issues by status</h2>
           <BarList
@@ -148,6 +162,12 @@ export default async function InsightsPage({ params }: PageProps<"/projects/[key
           <h2 className="mb-4 text-[13px] font-semibold">Open issues by priority</h2>
           <BarList
             items={PRIORITIES.map((p) => ({ key: p, label: PRIORITY_META[p].label, value: byPriority.get(p) ?? 0, icon: <PriorityIcon priority={p} /> }))}
+          />
+        </section>
+        <section className="card p-4 sm:p-5">
+          <h2 className="mb-4 text-[13px] font-semibold">Open issues by type</h2>
+          <BarList
+            items={TYPES.map((t) => ({ key: t, label: TYPE_META[t].label, value: byType.get(t) ?? 0, icon: <TypeIcon type={t} /> }))}
           />
         </section>
         <section className="card p-4 sm:p-5">

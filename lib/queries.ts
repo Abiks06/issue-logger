@@ -42,6 +42,7 @@ export const issueRowSelect = {
   _count: { select: { comments: true } },
   children: { select: { status: true } },
   firstResponseAt: true,
+  estimate: true,
   closedAt: true,
 } satisfies Prisma.IssueSelect;
 

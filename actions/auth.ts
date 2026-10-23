@@ -9,7 +9,7 @@ import { acceptPendingInvites } from "@/lib/invites";
 import { run, type ActionResult } from "@/lib/action";
 import { actionEmail, appUrl, mailConfigured, sendMail } from "@/lib/mail";
 import { randomToken, sha256 } from "@/lib/tokens";
-import { createRateLimiter } from "@/lib/rate-limit";
+import { createSharedRateLimiter } from "@/lib/shared-rate-limit";
 import {
   changePasswordSchema,
   forgotPasswordSchema,
@@ -21,7 +21,7 @@ import type { TokenType } from "@prisma/client";
 
 const HOUR = 60 * 60 * 1000;
 // Caps verification / reset emails per address so the forms can't be used to spam someone.
-const emailLimiter = createRateLimiter({ limit: 5, windowMs: HOUR });
+const emailLimiter = createSharedRateLimiter({ name: "auth-email", limit: 5, windowMs: HOUR });
 
 /** Replaces any outstanding token of this type and returns the raw value for the link. */
 async function issueToken(identifier: string, type: TokenType, ttlMs: number) {
@@ -108,7 +108,7 @@ export async function verifyEmail(token: string): Promise<ActionResult> {
 export async function resendVerificationEmail(input: unknown): Promise<ActionResult> {
   return run(async () => {
     const { email } = forgotPasswordSchema.parse(input);
-    if (!emailLimiter(`verify:${email}`).ok) throw new ActionError("Too many requests. Try again later.");
+    if (!(await emailLimiter(`verify:${email}`)).ok) throw new ActionError("Too many requests. Try again later.");
     const user = await prisma.user.findUnique({ where: { email } });
     // Same response whether or not the account exists.
     if (user && !user.emailVerified) await sendVerification(user.email, user.name);
@@ -119,7 +119,7 @@ export async function resendVerificationEmail(input: unknown): Promise<ActionRes
 export async function requestPasswordReset(input: unknown): Promise<ActionResult> {
   return run(async () => {
     const { email } = forgotPasswordSchema.parse(input);
-    if (!emailLimiter(`reset:${email}`).ok) throw new ActionError("Too many requests. Try again later.");
+    if (!(await emailLimiter(`reset:${email}`)).ok) throw new ActionError("Too many requests. Try again later.");
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return undefined;
 

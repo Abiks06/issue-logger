@@ -315,3 +315,13 @@ model Notification {
 
   @@index([userId, readAt, createdAt])
 }
+
+/// Fixed-window counters shared by every server instance (see lib/shared-rate-limit.ts).
+/// Keys are hashed, so emails and API keys aren't stored here.
+model RateLimit {
+  key     String   @id @db.VarChar(80)
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+}

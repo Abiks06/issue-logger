@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { loginSchema } from "@/lib/validation";
-import { createRateLimiter } from "@/lib/rate-limit";
+import { createSharedRateLimiter } from "@/lib/shared-rate-limit";
 import { SESSION_MAX_AGE_SECONDS, idleExpired, needsRecheck, parseRemember } from "@/lib/session-policy";
 
 if (!process.env.NEXTAUTH_URL && process.env.VERCEL_URL) {
@@ -23,7 +23,7 @@ class TooManyAttemptsError extends CredentialsSignin {
 }
 
 // 10 attempts per email per 15 minutes slows down password guessing.
-const loginLimiter = createRateLimiter({ limit: 10, windowMs: 15 * 60_000 });
+const loginLimiter = createSharedRateLimiter({ name: "login", limit: 10, windowMs: 15 * 60_000 });
 
 // Compared against when the email is unknown, so response time doesn't reveal
 // which addresses have accounts.
@@ -55,6 +55,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   cookies: appCookies(),
+  // Wrong passwords are expected; logging a stack trace for each one buries real errors.
+  logger: {
+    error(error) {
+      if (error.name === "CredentialsSignin" || (error as { type?: string }).type === "CredentialsSignin") return;
+      console.error("[auth]", error);
+    },
+  },
   pages: {
     signIn: "/auth/login",
     error: "/auth/login",
@@ -72,7 +79,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) throw new InvalidCredentialsError();
         const { email, password } = parsed.data;
 
-        if (!loginLimiter(email).ok) throw new TooManyAttemptsError();
+        if (!(await loginLimiter(email)).ok) throw new TooManyAttemptsError();
 
         const user = await prisma.user.findUnique({ where: { email } });
         const valid = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_HASH);

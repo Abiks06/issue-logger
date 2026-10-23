@@ -154,6 +154,8 @@ export default function Board({ projectId, projectKey, columns, issues: initial,
           const limit = wipLimits[status];
           const total = issues.filter((i) => i.status === status).length;
           const wip = !limit ? "none" : total > limit ? "over" : total === limit ? "full" : "ok";
+          // Points of the cards shown, so the total follows the board filters.
+          const points = list.reduce((sum, i) => sum + (i.estimate ?? 0), 0);
           return (
             <section
               key={status}
@@ -192,6 +194,11 @@ export default function Board({ projectId, projectKey, columns, issues: initial,
                   </span>
                 ) : (
                   <span className="text-xs text-faint">{list.length}</span>
+                )}
+                {points > 0 && (
+                  <span className="text-xs text-faint tabular-nums" title={`${points} estimate points in this column`}>
+                    · {points} pts
+                  </span>
                 )}
                 {canEdit && (
                   <button
