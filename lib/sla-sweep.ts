@@ -2,6 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/db";
 import { OPEN_STATUSES } from "@/lib/constants";
 import { evaluateSla, targetsFromRows } from "@/lib/sla";
+import { emitWebhookEvent, runOutbox } from "@/lib/outbox";
 
 // Sends "SLA at risk" / "SLA breached" notifications. Runs from the cron
 // endpoint (app/api/cron/sla) and opportunistically after page renders, at
@@ -19,6 +20,8 @@ export async function maybeSweepSla() {
   running = true;
   try {
     await sweepSla();
+    // Backstop for anything a request's after() didn't get to (e.g. retries).
+    await runOutbox();
   } catch (err) {
     console.error("SLA sweep failed", err);
   } finally {
@@ -52,12 +55,13 @@ export async function sweepSla(now = new Date()) {
 
       // Unassigned work alerts the people who can triage it.
       const recipients = issue.assigneeId ? [issue.assigneeId] : project.members.map((m) => m.userId);
-      await prisma.$transaction([
-        prisma.issue.update({ where: { id: issue.id }, data: { slaAlert: level } }),
-        prisma.notification.createMany({
+      await prisma.$transaction(async (tx) => {
+        await tx.issue.update({ where: { id: issue.id }, data: { slaAlert: level } });
+        await tx.notification.createMany({
           data: recipients.map((userId) => ({ userId, issueId: issue.id, type: level === 2 ? "SLA_BREACHED" : "SLA_AT_RISK" })),
-        }),
-      ]);
+        });
+        if (level === 2) await emitWebhookEvent(tx, { projectId: project.id, event: "sla.breached", issueId: issue.id });
+      });
       sent += recipients.length;
     }
   }

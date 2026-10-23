@@ -10,6 +10,7 @@ import LabelsSettings from "@/components/settings/LabelsSettings";
 import ApiKeysSettings from "@/components/settings/ApiKeysSettings";
 import DangerZone from "@/components/settings/DangerZone";
 import WorkflowSettings from "@/components/settings/WorkflowSettings";
+import WebhooksSettings from "@/components/settings/WebhooksSettings";
 import type { Status } from "@/lib/constants";
 
 export const metadata: Metadata = { title: "Project settings" };
@@ -31,7 +32,7 @@ export default async function SettingsPage({ params }: PageProps<"/projects/[key
   const { project, role, user } = await requireProject(key);
   const canManage = can(role, "project:manage");
 
-  const [members, labels, apiKeys, invites] = await Promise.all([
+  const [members, labels, apiKeys, invites, webhooks] = await Promise.all([
     projectMembers(project.id),
     projectLabels(project.id),
     canManage
@@ -46,6 +47,16 @@ export default async function SettingsPage({ params }: PageProps<"/projects/[key
       orderBy: { createdAt: "desc" },
       select: { id: true, email: true, role: true, createdAt: true, invitedBy: { select: { name: true } } },
     }),
+    canManage
+      ? prisma.webhook.findMany({
+          where: { projectId: project.id },
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true, url: true, events: true, active: true, lastStatus: true, lastError: true, lastDeliveredAt: true,
+            deliveries: { orderBy: { createdAt: "desc" }, take: 8, select: { id: true, event: true, status: true, attempts: true, responseCode: true, error: true, createdAt: true } },
+          },
+        })
+      : Promise.resolve([]),
   ]);
 
   return (
@@ -75,6 +86,9 @@ export default async function SettingsPage({ params }: PageProps<"/projects/[key
           </Section>
           <Section id="labels" title="Labels" description="Tag issues by area, component or theme.">
             <LabelsSettings projectId={project.id} labels={labels} />
+          </Section>
+          <Section id="webhooks" title="Webhooks" description="Post issue events to Slack, Discord or your own endpoint. Deliveries are signed and retried.">
+            <WebhooksSettings projectId={project.id} hooks={webhooks} />
           </Section>
           <Section id="api" title="API keys" description="Let your services report errors straight into this project. Repeats are grouped into one issue.">
             <ApiKeysSettings projectId={project.id} apiKeys={apiKeys} endpoint={appUrl("/api/v1/events")} />

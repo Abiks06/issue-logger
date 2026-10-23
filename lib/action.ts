@@ -1,3 +1,4 @@
+import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 import { ActionError } from "@/lib/access";
 
@@ -12,6 +13,7 @@ export async function run<T>(fn: () => Promise<T>): Promise<ActionResult<T>> {
   try {
     return { ok: true, data: await fn() };
   } catch (err) {
+    unstable_rethrow(err); // let redirect(), notFound() and signOut's redirect through
     if (err instanceof ActionError) return { ok: false, error: err.message };
     if (err instanceof z.ZodError) {
       return { ok: false, error: "Please fix the highlighted fields.", fieldErrors: z.flattenError(err).fieldErrors };

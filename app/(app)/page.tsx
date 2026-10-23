@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { CheckCircle2, FolderKanban, Plus } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/access";
 import { issueRowSelect } from "@/lib/queries";
 import { isOverdue, startOfDay } from "@/lib/analytics";
-import { OPEN_STATUSES, STATUS_META, issueKey, type Priority, type Status } from "@/lib/constants";
+import { ONBOARDING_COOKIE, OPEN_STATUSES, STATUS_META, issueKey, type Priority, type Status } from "@/lib/constants";
 import { Avatar, EmptyState, ProjectBadge, TimeAgo, shortDate } from "@/components/ui/bits";
 import { PriorityIcon, StatusIcon } from "@/components/ui/icons";
 import StatTile from "@/components/charts/StatTile";
@@ -13,12 +14,39 @@ import PageHeader from "@/components/PageHeader";
 import { SlaBadge } from "@/components/issues/SlaBadge";
 import { evaluateSla, targetsFromRows, type SlaTargets } from "@/lib/sla";
 import AutoRefresh from "@/components/AutoRefresh";
+import { OnboardingChecklist, SampleProjectButton, type OnboardingStep } from "@/components/Onboarding";
 
 export const metadata: Metadata = { title: "My work" };
 
 function greeting(now: Date) {
   const h = now.getHours();
   return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+}
+
+/** Getting-started steps, or null once they're all done or the checklist was dismissed. */
+async function onboardingSteps(userId: string): Promise<OnboardingStep[] | null> {
+  if ((await cookies()).get(ONBOARDING_COOKIE)) return null;
+  const mine = { members: { some: { userId } } };
+  const [first, issue, teammate, invite, apiKey, webhook] = await Promise.all([
+    prisma.project.findFirst({
+      where: { members: { some: { userId, role: { in: ["OWNER", "ADMIN"] } } } },
+      orderBy: { createdAt: "asc" },
+      select: { key: true },
+    }),
+    prisma.issue.findFirst({ where: { project: mine }, select: { id: true } }),
+    prisma.projectMember.findFirst({ where: { project: mine, userId: { not: userId } }, select: { id: true } }),
+    prisma.projectInvite.findFirst({ where: { project: mine }, select: { id: true } }),
+    prisma.apiKey.findFirst({ where: { project: mine }, select: { id: true } }),
+    prisma.webhook.findFirst({ where: { project: mine }, select: { id: true } }),
+  ]);
+  const base = first ? `/projects/${first.key}` : "/projects";
+  const steps: OnboardingStep[] = [
+    { id: "project", label: "Create a project", detail: "A home for one product or team's issues.", href: "/projects/new", done: true },
+    { id: "issue", label: "Log your first issue", detail: "Press C anywhere to create one.", href: first ? `${base}/issues/new` : base, done: Boolean(issue) },
+    { id: "invite", label: "Invite a teammate", detail: "Share the work and assign issues.", href: `${base}/settings#members`, done: Boolean(teammate || invite) },
+    { id: "connect", label: "Connect a service", detail: "Send errors in with an API key, or post updates to Slack.", href: `${base}/settings#api`, done: Boolean(apiKey || webhook) },
+  ];
+  return steps.every((s) => s.done) ? null : steps;
 }
 
 export default async function MyWorkPage() {
@@ -49,6 +77,7 @@ export default async function MyWorkPage() {
     prisma.project.count({ where: myProjects }),
     prisma.slaTarget.findMany({ where: { project: myProjects } }),
   ]);
+  const onboarding = projectCount > 0 ? await onboardingSteps(user.id) : null;
 
   const targetsByProject = new Map<string, SlaTargets>();
   for (const row of slaRows) {
@@ -77,11 +106,17 @@ export default async function MyWorkPage() {
           <StatTile label="Done this week" value={resolvedThisWeek} detail="Closed by you or for you" />
         </div>
 
+        {onboarding && <OnboardingChecklist steps={onboarding} />}
+
         {projectCount === 0 ? (
           <div className="card">
             <EmptyState icon={<FolderKanban className="h-5 w-5" />} title="Welcome to Issue Logger">
               Start by creating a project. You can invite teammates and connect your services afterwards.
-              <div className="mt-4"><Link href="/projects/new" className="btn-primary"><Plus className="h-4 w-4" /> Create a project</Link></div>
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                <Link href="/projects/new" className="btn-primary"><Plus className="h-4 w-4" /> Create a project</Link>
+                <SampleProjectButton />
+              </div>
+              <p className="mt-3 text-xs text-faint">The sample project is filled with example issues so you can explore the board, SLAs and insights first.</p>
             </EmptyState>
           </div>
         ) : (

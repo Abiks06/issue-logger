@@ -1,6 +1,9 @@
 // Display metadata shared by server and client code. Keep this file free of
 // runtime Prisma imports so it can ship to the browser.
 
+/** Set when someone dismisses the getting-started checklist on My work. */
+export const ONBOARDING_COOKIE = "issue-logger.onboarding-hidden";
+
 export const STATUSES = ["BACKLOG", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "CANCELED"] as const;
 export const PRIORITIES = ["URGENT", "HIGH", "MEDIUM", "LOW", "NONE"] as const;
 export const TYPES = ["BUG", "FEATURE", "TASK", "INCIDENT"] as const;

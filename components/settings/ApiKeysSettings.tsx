@@ -8,6 +8,75 @@ import { createApiKey, revokeApiKey } from "@/actions/projects";
 import { TimeAgo } from "@/components/ui/bits";
 import ConfirmButton from "@/components/ui/ConfirmButton";
 
+type Lang = "curl" | "node" | "python";
+const LANGS: { id: Lang; label: string }[] = [
+  { id: "curl", label: "curl" },
+  { id: "node", label: "Node.js" },
+  { id: "python", label: "Python" },
+];
+
+function nodeSnippet(endpoint: string, key: string) {
+  return `// Report uncaught errors from a Node.js process (Node 18+).
+const ENDPOINT = "${endpoint}";
+const API_KEY = process.env.ISSUE_LOGGER_KEY ?? "${key}";
+
+async function report(err, extra = {}) {
+  const e = err instanceof Error ? err : new Error(String(err));
+  try {
+    await fetch(ENDPOINT, {
+      method: "POST",
+      headers: { Authorization: \`Bearer \${API_KEY}\`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: \`\${e.name}: \${e.message}\`.slice(0, 200),
+        level: "error",
+        environment: process.env.NODE_ENV ?? "production",
+        stacktrace: e.stack,
+        ...extra,
+      }),
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch {
+    // Never let error reporting crash the app.
+  }
+}
+
+process.on("unhandledRejection", (reason) => void report(reason));
+process.on("uncaughtException", async (err) => {
+  await report(err, { level: "fatal" });
+  process.exit(1);
+});`;
+}
+
+function pythonSnippet(endpoint: string, key: string) {
+  return `# Report uncaught exceptions from a Python process (needs requests).
+import os, sys, traceback, requests
+
+ENDPOINT = "${endpoint}"
+API_KEY = os.environ.get("ISSUE_LOGGER_KEY", "${key}")
+
+def report(exc_type, exc, tb, level="error"):
+    try:
+        requests.post(
+            ENDPOINT,
+            headers={"Authorization": f"Bearer {API_KEY}"},
+            json={
+                "title": f"{exc_type.__name__}: {exc}"[:200],
+                "level": level,
+                "environment": os.environ.get("APP_ENV", "production"),
+                "stacktrace": "".join(traceback.format_exception(exc_type, exc, tb)),
+            },
+            timeout=3,
+        )
+    except Exception:
+        pass  # never let error reporting crash the app
+
+def excepthook(exc_type, exc, tb):
+    report(exc_type, exc, tb, level="fatal")
+    sys.__excepthook__(exc_type, exc, tb)
+
+sys.excepthook = excepthook`;
+}
+
 type Key = {
   id: string;
   name: string;
@@ -41,9 +110,11 @@ export default function ApiKeysSettings({ projectId, apiKeys, endpoint }: { proj
   const [pending, startTransition] = useTransition();
   const [name, setName] = useState("");
   const [secret, setSecret] = useState<string | null>(null);
+  const [lang, setLang] = useState<Lang>("curl");
+  const key = secret ?? "il_your_key";
 
   const curl = `curl -X POST ${endpoint} \\
-  -H "Authorization: Bearer ${secret ?? "il_your_key"}" \\
+  -H "Authorization: Bearer ${key}" \\
   -H "Content-Type: application/json" \\
   -d '{
     "title": "TypeError: Cannot read properties of undefined",
@@ -52,6 +123,7 @@ export default function ApiKeysSettings({ projectId, apiKeys, endpoint }: { proj
     "message": "Checkout failed for order 1234",
     "stacktrace": "at submitOrder (src/checkout.ts:42:13)"
   }'`;
+  const snippets: Record<Lang, string> = { curl, node: nodeSnippet(endpoint, key), python: pythonSnippet(endpoint, key) };
 
   return (
     <div className="flex flex-col gap-3">
@@ -126,10 +198,30 @@ export default function ApiKeysSettings({ projectId, apiKeys, endpoint }: { proj
             <code className="rounded bg-surface-2 px-1 font-mono text-xs">POST /api/v1/events</code> creates an issue the first time an error is seen. Later events with the
             same fingerprint add to its occurrence count, and an event for a resolved issue reopens it as a regression.
           </p>
-          <div className="relative">
-            <pre className="overflow-x-auto rounded-md border border-line bg-surface-2 p-3 font-mono text-[11.5px] leading-relaxed text-fg">{curl}</pre>
-            <span className="absolute right-1.5 top-1.5"><CopyButton text={curl} /></span>
+          <div className="flex gap-1" role="tablist" aria-label="Snippet language">
+            {LANGS.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                role="tab"
+                aria-selected={lang === l.id}
+                className={`h-7 rounded-md px-2.5 text-xs font-medium ${lang === l.id ? "bg-surface-2 text-fg" : "text-muted hover:text-fg"}`}
+                onClick={() => setLang(l.id)}
+              >
+                {l.label}
+              </button>
+            ))}
           </div>
+          <div className="relative">
+            <pre className="overflow-x-auto rounded-md border border-line bg-surface-2 p-3 font-mono text-[11.5px] leading-relaxed text-fg">{snippets[lang]}</pre>
+            <span className="absolute right-1.5 top-1.5"><CopyButton text={snippets[lang]} /></span>
+          </div>
+          {lang !== "curl" && (
+            <p className="text-xs">
+              Run this on your server, never in the browser: the key would be visible to anyone, and the endpoint doesn&apos;t accept cross-origin
+              requests. Keep the key in an environment variable rather than in code.
+            </p>
+          )}
           <p className="text-xs">
             Fields: <code>title</code> (required), <code>level</code> (fatal · error · warning · info), <code>message</code>, <code>stacktrace</code>,{" "}
             <code>environment</code>, <code>fingerprint</code> (optional custom grouping key), <code>metadata</code> (object). Limit 120 requests/minute per key.

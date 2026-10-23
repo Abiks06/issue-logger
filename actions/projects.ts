@@ -7,7 +7,8 @@ import { ActionError, authorizeProject, currentUser } from "@/lib/access";
 import { run, type ActionResult } from "@/lib/action";
 import { canChangeRole, canRemoveMember } from "@/lib/permissions";
 import { generateApiKey } from "@/lib/tokens";
-import { PRIORITIES, ROLES, STATUSES, type Role } from "@/lib/constants";
+import { PRIORITIES, ROLES, STATUSES, type Role, type Status } from "@/lib/constants";
+import { insertIssue } from "@/lib/issue-service";
 import { DEFAULT_TARGETS } from "@/lib/sla";
 import { baselineSlaAlerts } from "@/lib/sla-sweep";
 import { apiKeySchema, inviteSchema, labelSchema, projectSchema, projectSettingsSchema } from "@/lib/validation";
@@ -337,5 +338,71 @@ export async function updateWorkflow(projectId: string, input: unknown): Promise
     await baselineSlaAlerts(projectId);
     refresh(project.key);
     return undefined;
+  });
+}
+
+// ─── Sample project (onboarding) ──────────────────────────────────────
+
+const SAMPLE_ISSUES: { title: string; status: Status; priority: "URGENT" | "HIGH" | "MEDIUM" | "LOW"; type: "BUG" | "FEATURE" | "TASK"; estimate: number; label: string; description: string }[] = [
+  { title: "Drag me to another column", status: "TODO", priority: "MEDIUM", type: "TASK", estimate: 1, label: "frontend", description: "Cards move between columns on the **Board** tab. Moving one here updates its status and history." },
+  { title: "Open me to see sub-issues and comments", status: "IN_PROGRESS", priority: "HIGH", type: "FEATURE", estimate: 3, label: "frontend", description: "Issues can be split into sub-issues, discussed in comments (type `@` to mention someone) and tracked on a timeline." },
+  { title: "Checkout fails for some cards", status: "TODO", priority: "URGENT", type: "BUG", estimate: 5, label: "backend", description: "Urgent issues have an SLA: respond within 1 hour, resolve within 8. Watch the clock in the sidebar." },
+  { title: "Try the list view with filters", status: "BACKLOG", priority: "LOW", type: "TASK", estimate: 1, label: "frontend", description: "Filter by status, priority, assignee or SLA state, then **Save view** to keep the filter." },
+  { title: "Send an error from your app", status: "BACKLOG", priority: "MEDIUM", type: "TASK", estimate: 2, label: "infra", description: "Create an API key under **Settings → API keys** and copy a snippet. Repeated errors group into one issue." },
+  { title: "Ship the onboarding checklist", status: "DONE", priority: "MEDIUM", type: "FEATURE", estimate: 3, label: "frontend", description: "Done issues count towards velocity on the **Insights** tab." },
+];
+
+/** Creates a small, explorable project for a new account. Delete it any time from its settings. */
+export async function createSampleProject(): Promise<ActionResult<{ key: string }>> {
+  return run(async () => {
+    const user = await currentUser();
+    if (!user) throw new ActionError("You need to sign in again.");
+    const taken = new Set((await prisma.project.findMany({ where: { key: { startsWith: "TOUR" } }, select: { key: true } })).map((p) => p.key));
+    const key = ["TOUR", ...Array.from({ length: 98 }, (_, i) => `TOUR${i + 2}`)].find((k) => !taken.has(k));
+    if (!key) throw new ActionError("Couldn't pick a key for the sample project.");
+
+    const project = await prisma.$transaction(async (tx) => {
+      const p = await tx.project.create({
+        data: {
+          key,
+          name: "Sample project",
+          description: "A sandbox to explore Issue Logger. Delete it from Settings when you're done.",
+          color: "#14b8a6",
+          members: { create: { userId: user.id, role: "OWNER" } },
+          labels: { create: DEFAULT_LABELS },
+          slaTargets: {
+            create: PRIORITIES.filter((pr) => DEFAULT_TARGETS[pr].resolve).map((priority) => ({
+              priority,
+              respondMinutes: DEFAULT_TARGETS[priority].respond,
+              resolveMinutes: DEFAULT_TARGETS[priority].resolve,
+            })),
+          },
+        },
+        include: { labels: true },
+      });
+      const created: { id: string; title: string }[] = [];
+      for (const s of SAMPLE_ISSUES) {
+        const issue = await insertIssue(tx, p.id, {
+          title: s.title,
+          description: s.description,
+          status: s.status,
+          priority: s.priority,
+          type: s.type,
+          estimate: s.estimate,
+          reporterId: user.id,
+          assigneeId: s.status === "DONE" ? null : user.id,
+          labelIds: p.labels.filter((l) => l.name === s.label).map((l) => l.id),
+        });
+        created.push({ id: issue.id, title: s.title });
+      }
+      const parent = created[1];
+      await insertIssue(tx, p.id, { title: "A sub-issue of the one above", status: "TODO", priority: "LOW", type: "TASK", reporterId: user.id, parentId: parent.id });
+      await tx.comment.create({ data: { issueId: parent.id, authorId: user.id, body: "Comments support **Markdown**, checklists and `code`.\n\n- [x] Open an issue\n- [ ] Leave a comment" } });
+      return p;
+    });
+
+    await baselineSlaAlerts(project.id);
+    refresh(project.key);
+    return { key: project.key };
   });
 }

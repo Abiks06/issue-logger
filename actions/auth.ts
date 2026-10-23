@@ -4,7 +4,8 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { headers } from "next/headers";
-import { auth, signIn } from "@/auth";
+import { auth, signIn, signOut } from "@/auth";
+import { EMAIL_TYPES, type EmailType } from "@/lib/email-prefs";
 import { ActionError, currentUser } from "@/lib/access";
 import { acceptPendingInvites } from "@/lib/invites";
 import { run, type ActionResult } from "@/lib/action";
@@ -220,6 +221,55 @@ export async function signOutOtherSessions(input: unknown): Promise<ActionResult
     const { password } = z.object({ password: z.string().min(1, "Enter your password") }).parse(input);
     const row = await verifyCurrentPassword(password);
     await revokeOtherSessions(row.id, row.email, password);
+    return undefined;
+  });
+}
+
+// ─── Email preferences and account lifecycle ─────────────────────────
+
+export async function updateEmailPrefs(input: unknown): Promise<ActionResult> {
+  return run(async () => {
+    const user = await currentUser();
+    if (!user) throw new ActionError("You need to sign in again.");
+    const prefs = z.record(z.enum(EMAIL_TYPES.map((t) => t.type) as [EmailType, ...EmailType[]]), z.boolean()).parse(input);
+    await prisma.user.update({ where: { id: user.id }, data: { emailPrefs: prefs } });
+    return undefined;
+  });
+}
+
+/**
+ * Deletes the signed-in account after re-checking the password. Projects the
+ * user owns alone with other members block deletion (ownership must move
+ * first); projects where they're the only member are deleted with them. Issues,
+ * comments and history they wrote stay, attributed to a deleted user.
+ */
+export async function deleteAccount(input: unknown): Promise<ActionResult> {
+  return run(async () => {
+    const { password } = z.object({ password: z.string().min(1, "Enter your password"), confirm: z.literal("DELETE") }).parse(input);
+    const row = await verifyCurrentPassword(password);
+
+    const owned = await prisma.projectMember.findMany({
+      where: { userId: row.id, role: "OWNER" },
+      select: { project: { select: { id: true, key: true, members: { select: { userId: true, role: true } } } } },
+    });
+    const blocking = owned.filter(({ project }) => {
+      const otherOwners = project.members.some((m) => m.userId !== row.id && m.role === "OWNER");
+      const others = project.members.some((m) => m.userId !== row.id);
+      return others && !otherOwners;
+    });
+    if (blocking.length) {
+      throw new ActionError(
+        `Make someone else an owner of ${blocking.map((b) => b.project.key).join(", ")} first, or remove the other members.`,
+      );
+    }
+    const soloProjects = owned.filter(({ project }) => project.members.every((m) => m.userId === row.id)).map((o) => o.project.id);
+
+    await prisma.$transaction([
+      prisma.project.deleteMany({ where: { id: { in: soloProjects } } }),
+      prisma.authToken.deleteMany({ where: { identifier: row.email } }),
+      prisma.user.delete({ where: { id: row.id } }),
+    ]);
+    await signOut({ redirectTo: "/auth/login?deleted=1" });
     return undefined;
   });
 }

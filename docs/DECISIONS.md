@@ -154,3 +154,62 @@ Verification and reset tokens aren't carried over; users can request new ones.
 assignee, description, latest comments); Ctrl/Cmd/middle-click and Enter still
 open the full page. The list's keyboard shortcuts ignore keys handled by a picker
 or typed inside the panel.
+
+## 15. Webhooks and emails go through a transactional outbox
+
+**Choice.** A change that should notify the outside world writes a
+`WebhookDelivery` row (or relies on the `Notification` row it already writes)
+inside the same database transaction. Delivery happens afterwards: right after
+the response via `after()`, on the throttled SLA sweep, and on the cron route.
+Workers claim rows with a conditional update on `attempts` and a 5-minute lease,
+so two instances never send the same row twice in parallel. Emails use
+`Notification.emailedAt` as their outbox marker.
+
+**Alternative rejected.** Calling the webhook inside the server action. A slow
+or failing endpoint would slow down or fail the user's edit, and a change that
+rolled back could already have been announced.
+
+**Consequences.** Delivery is at-least-once: a worker that dies after the POST
+but before recording success sends again once the lease expires. Payloads carry
+`occurredAt` and the issue key so receivers can de-duplicate. The migration
+marks every existing notification as emailed, so turning email on doesn't send
+a backlog.
+
+## 16. Webhook targets are checked twice for SSRF
+
+**Choice.** The URL is checked when it's saved (HTTPS in production, no IP
+literals in private ranges, no `localhost`) and the host is resolved again before
+every delivery, rejecting private, loopback, link-local and CGNAT addresses.
+Redirects are not followed and requests time out after 8 seconds.
+
+**Why.** Webhooks let a project admin make the server send requests. Checking
+only at save time would let someone point DNS at an internal address later.
+
+**Consequences.** There is a small window between the lookup and the connection
+(DNS rebinding). Closing it fully needs a custom dispatcher that pins the
+resolved address, which isn't worth it for this app's threat model. Development
+allows local URLs so webhooks can be tested against a local receiver.
+
+## 17. Email preferences default to the important events
+
+**Choice.** Every Inbox notification type can also be emailed. Assignments,
+mentions, regressions and SLA breaches are on by default; comments, status
+changes and at-risk warnings are off. Preferences are a JSON column on `User`,
+so adding a type doesn't need a migration, and unknown keys fall back to the
+defaults.
+
+**Why.** Emailing every comment and status change trains people to ignore the
+emails. The Inbox already shows everything.
+
+## 18. The app monitors itself through its own public API
+
+**Choice.** `onRequestError` in `instrumentation.ts` posts uncaught server
+errors to `/api/v1/events` with an ordinary API key (`SELF_MONITOR_API_KEY`),
+grouped by route pattern and error message. Errors from the ingestion route are
+never reported, to avoid a loop, and a failed report is only logged.
+
+**Why.** It uses the product the way customers do, needs no third-party
+service, and makes the ingestion path the most exercised code in the app.
+
+**Consequences.** If the database is down, the report fails too. Vercel's
+runtime logs remain the fallback.

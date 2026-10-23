@@ -2,7 +2,7 @@
 
 A team issue tracker with a built-in error ingestion API. Plan work on a Kanban board, triage in a filterable list, discuss in threaded comments with @mentions, and let your own services report crashes straight into a project — repeats are grouped into one issue, and an error that comes back after it was fixed reopens itself as a regression.
 
-**[Live demo (v1)](https://issue-logger-beta.vercel.app)**
+**[Live app](https://issue-logger-beta.vercel.app)**
 
 ## What's new in v2
 
@@ -20,6 +20,7 @@ v1 was a single-user list of issues. v2 rebuilds it around teams and automation:
 | Automation | — | Ingestion API with fingerprint grouping and regression detection |
 | Navigation | Navbar | Sidebar, ⌘K command palette, keyboard shortcuts |
 | Export | — | CSV export that honours the current filters |
+| Integrations | — | Signed webhooks (Slack, Discord or any endpoint) and email notifications |
 
 ## Features
 
@@ -36,8 +37,11 @@ v1 was a single-user list of issues. v2 rebuilds it around teams and automation:
 - **Inbox.** Notifications for assignments, mentions, comments on issues you reported or own, status changes and regressions. Opening an issue clears its notifications.
 - **Insights.** A priority × status heatmap of open work (each cell links to the matching list), a breakdown by issue type, the created-vs-resolved chart for the last 30 days, net flow, median time to resolve, overdue count, breakdowns by status, priority and assignee, and the most frequent reported errors.
 - **My work.** Everything assigned to you across projects, grouped by status, with overdue and due-this-week counts and recent activity.
-- **Ingestion API.** See below.
-- **Accounts.** Email/password sign-up with email verification, password reset, profile and password change. Sessions last 30 days from your last visit (or 12 hours idle if you untick "Keep me signed in"), and "Sign out other devices" or a password change revokes every other session.
+- **Ingestion API.** See below, with copy-paste snippets for curl, Node.js and Python under Settings → API keys.
+- **Webhooks.** Post new issues, status changes, comments, regressions and SLA breaches to Slack, Discord or your own endpoint. See below.
+- **Email notifications.** Each person chooses which Inbox notifications are also emailed (Account → Email notifications). Assignments, mentions, regressions and SLA breaches are on by default.
+- **Getting started.** New accounts get a setup checklist on My work and can create a sample project full of example issues to explore before setting up their own.
+- **Accounts.** Email/password sign-up with email verification, password reset, profile and password change, JSON export of your data, and self-service account deletion. Sessions last 30 days from your last visit (or 12 hours idle if you untick "Keep me signed in"), and "Sign out other devices" or a password change revokes every other session.
 - **Polish.** ⌘K / Ctrl+K command palette, `c` to create, `/` to search, `g i` / `g p` / `g h` to navigate. Pages refresh themselves every 30 seconds and when you return to the tab, so you see teammates' changes. Loading skeletons on every main view. Light, dark and system themes. Works down to phone width.
 
 ## Ingestion API
@@ -69,6 +73,41 @@ curl -X POST https://your-app/api/v1/events \
 Responses: `201` for a new issue, `200` for a repeat (`occurrences` incremented). If the matching issue is Done or Canceled it moves back to Todo, logs a regression on its timeline and notifies the assignee and reporter (`"regressed": true`). `401` for a missing/revoked key, `422` for an invalid body, `429` past 120 requests per minute per key.
 
 `GET /api/v1/issues?status=TODO,IN_PROGRESS&limit=50` returns the key's project issues.
+
+## Webhooks
+
+Admins add webhooks under **Project → Settings → Webhooks** and pick which events to send: `issue.created`, `issue.status_changed`, `comment.created`, `issue.regressed` and `sla.breached`. Slack and Discord incoming-webhook URLs are detected and sent a formatted message; any other URL gets JSON:
+
+```json
+{
+  "event": "issue.status_changed",
+  "occurredAt": "2026-10-24T09:30:00.000Z",
+  "project": { "key": "API", "name": "Public API" },
+  "actor": "Ada",
+  "issue": { "key": "API-42", "number": 42, "title": "Checkout times out", "status": "IN_REVIEW", "priority": "HIGH", "url": "https://your-app/projects/API/issues/42" },
+  "data": { "from": "IN_PROGRESS", "to": "IN_REVIEW" }
+}
+```
+
+Each request carries `X-IssueLogger-Event`, `X-IssueLogger-Timestamp` and `X-IssueLogger-Signature: sha256=<hex>`, the HMAC-SHA256 of `<timestamp>.<raw body>` with the webhook's secret (shown once, when the webhook is created). Verify it and reject old timestamps:
+
+```js
+import { createHmac, timingSafeEqual } from "node:crypto";
+
+function verify(rawBody, headers, secret) {
+  const ts = headers["x-issuelogger-timestamp"];
+  if (Math.abs(Date.now() / 1000 - Number(ts)) > 300) return false;
+  const expected = "sha256=" + createHmac("sha256", secret).update(`${ts}.${rawBody}`).digest("hex");
+  const given = headers["x-issuelogger-signature"] ?? "";
+  return given.length === expected.length && timingSafeEqual(Buffer.from(given), Buffer.from(expected));
+}
+```
+
+Events are written to an outbox in the same transaction as the change, so a webhook never fires for a change that rolled back. Failed deliveries are retried with backoff (after 30 s, 2 min, 8 min, 32 min and about 2 h, so six attempts in all). Settings shows each webhook's last result and recent deliveries, and **Send test** posts a `webhook.test` event straight away.
+
+## Self-monitoring
+
+Issue Logger can report its own server errors into one of its projects. Create a project (say `OPS`), create an API key in it, and set `SELF_MONITOR_API_KEY` to that key. Every uncaught server error is then sent to `/api/v1/events`, grouped by route and error, with the stack trace. Query strings and headers are never sent. Set `SELF_MONITOR_URL` to report to a different Issue Logger instance.
 
 ## Tech stack
 
@@ -134,9 +173,11 @@ tests/            Unit tests for the pure logic in lib/
 | `npm run db:migrate` / `db:deploy` | Prisma migrations |
 | `npm run db:seed` | Replace the demo users and projects |
 
+GitHub Actions (`.github/workflows/ci.yml`) runs typecheck, lint, unit tests, every migration against a fresh Postgres 17, a check that `schema.prisma` has no changes missing a migration, and a production build on each push to `master` and each pull request.
+
 ### SLA alerts in production
 
-Alerts are swept at most once a minute after page loads. For alerts while nobody is using the app, set `CRON_SECRET` and call `GET /api/cron/sla` with `Authorization: Bearer <CRON_SECRET>` from any scheduler (Vercel Cron, GitHub Actions, cron + curl) every few minutes.
+Alerts are swept at most once a minute after page loads, and the same sweep sends due webhooks and emails. For alerts while nobody is using the app, set `CRON_SECRET` and call `GET /api/cron/sla` with `Authorization: Bearer <CRON_SECRET>` from any scheduler (Vercel Cron, GitHub Actions, cron + curl) every few minutes.
 
 ## Upgrading from v1
 
@@ -164,3 +205,5 @@ npm run migrate:v1 -- --source "postgresql://…v1…"             # import
 - Login, email and API rate limits are stored in Postgres (keys hashed), so they hold across every server instance.
 - API routes are private by default: the proxy rejects signed-out requests except for the self-authenticating routes listed in `proxy.ts`.
 - The server checks its environment at startup and refuses to start in production with missing or malformed required settings.
+- Webhook URLs must be HTTPS in production and may not point at private, loopback or link-local addresses; the host is re-resolved before every delivery (so DNS can't be switched to an internal address later) and redirects aren't followed. Payloads carry issue titles, status and priority, never descriptions; comment events include the first 280 characters of the comment.
+- Deleting an account removes the user, their tokens and every project where they were the only member. It's refused while they're the sole owner of a project other people use.

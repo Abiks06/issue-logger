@@ -80,6 +80,8 @@ model User {
   emailVerified  DateTime?
   /// Bumped to revoke every session (password change, "sign out everywhere").
   sessionVersion Int       @default(0)
+  /// Notification types to email, keyed by NotificationType (missing keys use lib/email-prefs defaults).
+  emailPrefs     Json      @default("{}")
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -129,6 +131,7 @@ model Project {
   invites    ProjectInvite[]
   views      SavedView[]
   slaTargets SlaTarget[]
+  webhooks   Webhook[]
 }
 
 model ProjectMember {
@@ -307,6 +310,8 @@ model Notification {
   issueId   String
   type      NotificationType
   readAt    DateTime?
+  /// Set when this notification has been emailed, or skipped by preference.
+  emailedAt DateTime?
   createdAt DateTime         @default(now())
 
   user  User  @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
@@ -314,6 +319,7 @@ model Notification {
   issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt, createdAt])
+  @@index([emailedAt, createdAt])
 }
 
 /// Fixed-window counters shared by every server instance (see lib/shared-rate-limit.ts).
@@ -324,4 +330,54 @@ model RateLimit {
   resetAt DateTime
 
   @@index([resetAt])
+}
+
+// ─── Integrations ───────────────────────────────────────────────────
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+/// Outgoing HTTP endpoint notified about project events (generic JSON, Slack or Discord).
+model Webhook {
+  id              String    @id @default(cuid())
+  projectId       String
+  url             String    @db.VarChar(500)
+  /// HMAC-SHA256 key for the X-IssueLogger-Signature header.
+  secret          String    @db.VarChar(80)
+  events          String[]
+  active          Boolean   @default(true)
+  createdById     String?
+  lastStatus      Int?
+  lastError       String?   @db.VarChar(300)
+  lastDeliveredAt DateTime?
+  createdAt       DateTime  @default(now())
+
+  project    Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([projectId])
+}
+
+/// Outbox row: written in the same transaction as the change it describes,
+/// delivered afterwards with retries (lib/outbox.ts).
+model WebhookDelivery {
+  id            String         @id @default(cuid())
+  webhookId     String
+  event         String         @db.VarChar(40)
+  payload       Json
+  status        DeliveryStatus @default(PENDING)
+  attempts      Int            @default(0)
+  nextAttemptAt DateTime       @default(now())
+  responseCode  Int?
+  error         String?        @db.VarChar(300)
+  createdAt     DateTime       @default(now())
+  deliveredAt   DateTime?
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([webhookId, createdAt])
 }

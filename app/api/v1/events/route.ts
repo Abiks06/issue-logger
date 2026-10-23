@@ -8,6 +8,7 @@ import { computeFingerprint, describeEvent, priorityForLevel, typeForLevel } fro
 import { insertIssue, notify, topPosition } from "@/lib/issue-service";
 import { CLOSED_STATUSES, issueKey, type Status } from "@/lib/constants";
 import { appUrl } from "@/lib/mail";
+import { emitWebhookEvent, scheduleOutbox } from "@/lib/outbox";
 
 /**
  * POST /api/v1/events — report an error or incident from your own services.
@@ -56,6 +57,7 @@ export async function POST(request: Request) {
         environment: event.environment ?? null,
         lastSeenAt: now,
       });
+      await emitWebhookEvent(tx, { projectId, event: "issue.created", issueId: issue.id, data: { source: "api", level: event.level } });
       return { issue, created: true, regressed: false };
     }
 
@@ -82,6 +84,7 @@ export async function POST(request: Request) {
         issueId: issue.id,
         type: "REGRESSED",
       });
+      await emitWebhookEvent(tx, { projectId, event: "issue.regressed", issueId: issue.id, data: { occurrences: issue.occurrences } });
     }
     return { issue, created: false, regressed };
   });
@@ -96,6 +99,7 @@ export async function POST(request: Request) {
     else throw err;
   }
 
+  scheduleOutbox();
   const project = await prisma.project.findUniqueOrThrow({ where: { id: projectId }, select: { key: true } });
 
   return NextResponse.json(

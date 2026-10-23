@@ -13,8 +13,11 @@ import { commentSchema, issuePatchSchema, issueSchema } from "@/lib/validation";
 import { PRIORITIES, STATUSES, issueKey, type Role, type Status } from "@/lib/constants";
 import { parseIssueKey } from "@/lib/issue-filters";
 import { evaluateSla, isResponse, targetsFromRows } from "@/lib/sla";
+import { emitWebhookEvent, scheduleOutbox } from "@/lib/outbox";
 
 function refresh(projectKey: string, number?: number) {
+  // Deliver webhooks and notification emails once the response is sent.
+  scheduleOutbox();
   revalidatePath(`/projects/${projectKey}`, "layout");
   if (number) revalidatePath(`/projects/${projectKey}/issues/${number}`);
   revalidatePath("/");
@@ -52,6 +55,7 @@ export async function createIssue(projectId: string, input: unknown): Promise<Ac
         labelIds: data.labelIds,
       });
       await notify(tx, { userIds: [created.assigneeId], actorId: user.id, issueId: created.id, type: "ASSIGNED" });
+      await emitWebhookEvent(tx, { projectId, event: "issue.created", issueId: created.id, actorId: user.id });
       return created;
     });
 
@@ -147,6 +151,13 @@ async function applyPatch(
         actorId,
         issueId: issue.id,
         type: "STATUS_CHANGED",
+      });
+      await emitWebhookEvent(tx, {
+        projectId: issue.projectId,
+        event: "issue.status_changed",
+        issueId: issue.id,
+        actorId,
+        data: { from: issue.status, to: patch.status },
       });
     }
   });
@@ -272,6 +283,7 @@ export async function addComment(issueId: string, input: unknown): Promise<Actio
         await tx.issue.update({ where: { id: issueId }, data: { firstResponseAt: new Date() } });
       }
       await tx.activity.create({ data: { issueId, actorId: user.id, kind: "COMMENTED" } });
+      await emitWebhookEvent(tx, { projectId: issue.projectId, event: "comment.created", issueId, actorId: user.id, data: { excerpt: body.slice(0, 280) } });
       await notify(tx, { userIds: mentioned, actorId: user.id, issueId, type: "MENTIONED" });
       await notify(tx, {
         userIds: [issue.assigneeId, issue.reporterId].filter((id) => id && !mentioned.includes(id)),

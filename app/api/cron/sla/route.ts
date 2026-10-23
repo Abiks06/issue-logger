@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { sweepSla } from "@/lib/sla-sweep";
+import { runOutbox } from "@/lib/outbox";
 import { bearerToken } from "@/lib/tokens";
 
 /**
@@ -11,5 +12,7 @@ export async function GET(request: Request) {
   if (!secret || bearerToken(request.headers.get("authorization")) !== secret) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return NextResponse.json(await sweepSla());
+  const result = await sweepSla();
+  await runOutbox();
+  return NextResponse.json(result);
 }

@@ -18,6 +18,8 @@ const schema = z.object({
   SMTP_PORT: z.string().regex(/^\d+$/, "must be a port number").optional(),
   RESEND_API_KEY: z.string().optional(),
   CRON_SECRET: z.string().optional(),
+  SELF_MONITOR_API_KEY: z.string().optional(),
+  SELF_MONITOR_URL: url.optional(),
 });
 
 export type EnvReport = { errors: string[]; warnings: string[] };
@@ -46,6 +48,9 @@ export function validateEnv(source: Record<string, string | undefined>, producti
   // Auth.js trusts the Host header automatically only on Vercel.
   if (production && !env.VERCEL && env.AUTH_TRUST_HOST !== "true") {
     warnings.push("AUTH_TRUST_HOST=true is needed outside Vercel (behind a proxy that sets Host), or sign-in will fail");
+  }
+  if (env.SELF_MONITOR_API_KEY && !env.SELF_MONITOR_API_KEY.startsWith("il_")) {
+    warnings.push("SELF_MONITOR_API_KEY doesn't look like an Issue Logger API key (il_…); self-monitoring reports will be rejected");
   }
   if (env.CRON_SECRET && env.CRON_SECRET.length < 16) warnings.push("CRON_SECRET should be at least 16 characters");
 
