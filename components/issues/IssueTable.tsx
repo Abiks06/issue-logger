@@ -8,6 +8,8 @@ import { CalendarClock, ListX, MessageSquare, Repeat, Trash2, X } from "lucide-r
 import { bulkUpdateIssues, deleteIssues } from "@/actions/issues";
 import type { IssueRow } from "@/lib/queries";
 import { isOverdue } from "@/lib/analytics";
+import { evaluateSla, type SlaTargets } from "@/lib/sla";
+import { SlaBadge } from "@/components/issues/SlaBadge";
 import type { IssueKind, Priority, Status } from "@/lib/constants";
 import { Avatar, EmptyState, LabelChip, TimeAgo, shortDate } from "@/components/ui/bits";
 import { PriorityIcon, StatusIcon, TypeIcon } from "@/components/ui/icons";
@@ -25,9 +27,10 @@ type Props = {
   canDeleteAny: boolean;
   total: number;
   filtered: boolean;
+  slaTargets: SlaTargets;
 };
 
-export default function IssueTable({ projectId, projectKey, issues, members, meId, canEdit, canDeleteAny, total, filtered }: Props) {
+export default function IssueTable({ projectId, projectKey, issues, members, meId, canEdit, canDeleteAny, total, filtered, slaTargets }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -143,6 +146,7 @@ export default function IssueTable({ projectId, projectKey, issues, members, meI
                 <div className="hidden items-center gap-1 lg:flex">
                   {issue.labels.slice(0, 2).map((l) => <LabelChip key={l.id} name={l.name} color={l.color} />)}
                 </div>
+                <SlaBadge sla={evaluateSla(issue, slaTargets)} />
                 <TypeIcon type={issue.type as IssueKind} className="hidden h-3.5 w-3.5 sm:block" />
                 {issue.source === "API" && issue.occurrences > 1 && (
                   <span className="hidden items-center gap-0.5 text-[11px] font-medium text-danger sm:inline-flex" title="Occurrences">

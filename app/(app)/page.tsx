@@ -10,6 +10,8 @@ import { Avatar, EmptyState, ProjectBadge, TimeAgo, shortDate } from "@/componen
 import { PriorityIcon, StatusIcon } from "@/components/ui/icons";
 import StatTile from "@/components/charts/StatTile";
 import PageHeader from "@/components/PageHeader";
+import { SlaBadge } from "@/components/issues/SlaBadge";
+import { evaluateSla, targetsFromRows, type SlaTargets } from "@/lib/sla";
 import AutoRefresh from "@/components/AutoRefresh";
 
 export const metadata: Metadata = { title: "My work" };
@@ -26,12 +28,12 @@ export default async function MyWorkPage() {
   const inAWeek = new Date(startOfDay(now).getTime() + 8 * 86_400_000);
   const myProjects = { members: { some: { userId: user.id } } };
 
-  const [assigned, resolvedThisWeek, activity, projectCount] = await Promise.all([
+  const [assigned, resolvedThisWeek, activity, projectCount, slaRows] = await Promise.all([
     prisma.issue.findMany({
       where: { assigneeId: user.id, status: { in: [...OPEN_STATUSES] }, project: myProjects },
       orderBy: [{ priority: "desc" }, { dueDate: { sort: "asc", nulls: "last" } }, { updatedAt: "desc" }],
       take: 100,
-      select: { ...issueRowSelect, project: { select: { key: true, name: true, color: true } } },
+      select: { ...issueRowSelect, projectId: true, project: { select: { key: true, name: true, color: true } } },
     }),
     prisma.issue.count({ where: { assigneeId: user.id, closedAt: { gte: weekAgo }, status: "DONE" } }),
     prisma.activity.findMany({
@@ -45,8 +47,18 @@ export default async function MyWorkPage() {
       },
     }),
     prisma.project.count({ where: myProjects }),
+    prisma.slaTarget.findMany({ where: { project: myProjects } }),
   ]);
 
+  const targetsByProject = new Map<string, SlaTargets>();
+  for (const row of slaRows) {
+    targetsByProject.set(row.projectId, { ...targetsByProject.get(row.projectId), ...targetsFromRows([row]) });
+  }
+  const slaOf = (i: (typeof assigned)[number]) => evaluateSla(i, targetsByProject.get(i.projectId) ?? {}, now);
+  const slaAttention = assigned.filter((i) => {
+    const w = slaOf(i).live;
+    return w === "at_risk" || w === "breached";
+  });
   const overdue = assigned.filter((i) => isOverdue({ dueDate: i.dueDate, closedAt: null }, now));
   const dueSoon = assigned.filter((i) => i.dueDate && !isOverdue({ dueDate: i.dueDate, closedAt: null }, now) && i.dueDate < inAWeek);
   const groups = (["IN_REVIEW", "IN_PROGRESS", "TODO", "BACKLOG"] as Status[])
@@ -59,9 +71,9 @@ export default async function MyWorkPage() {
       <PageHeader title={`${greeting(now)}, ${user.name.split(" ")[0]}`} subtitle="Everything assigned to you across your projects." />
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 sm:p-6">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <StatTile label="Assigned to me" value={assigned.length} detail="Open issues" />
+          <StatTile label="Assigned to me" value={assigned.length} detail={`${dueSoon.length} due in the next 7 days`} />
           <StatTile label="Overdue" value={overdue.length} tone={overdue.length ? "danger" : undefined} detail="Past their due date" />
-          <StatTile label="Due this week" value={dueSoon.length} detail="Next 7 days" />
+          <StatTile label="SLA needs attention" value={slaAttention.length} tone={slaAttention.length ? "danger" : undefined} detail="Your issues at risk or breached" />
           <StatTile label="Done this week" value={resolvedThisWeek} detail="Closed by you or for you" />
         </div>
 
@@ -101,6 +113,7 @@ export default async function MyWorkPage() {
                               <Link href={`/projects/${i.project.key}/issues/${i.number}`} className="min-w-0 flex-1 truncate text-[13px] font-medium hover:text-accent">
                                 {i.title}
                               </Link>
+                              <SlaBadge sla={slaOf(i)} />
                               {i.dueDate && (
                                 <span className={`text-[11px] ${late ? "font-medium text-danger" : "text-faint"}`}>
                                   {late ? "Overdue · " : "Due "}{shortDate(i.dueDate)}

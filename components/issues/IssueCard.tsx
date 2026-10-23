@@ -3,11 +3,13 @@ import { CalendarClock, ListTree, MessageSquare, Repeat } from "lucide-react";
 import type { IssueRow } from "@/lib/queries";
 import type { IssueKind, Priority } from "@/lib/constants";
 import { isOverdue } from "@/lib/analytics";
+import type { SlaStatus } from "@/lib/sla";
+import { SlaBadge } from "@/components/issues/SlaBadge";
 import { Avatar, LabelChip, shortDate } from "@/components/ui/bits";
 import { PriorityIcon, TypeIcon } from "@/components/ui/icons";
 
 /** Board card. Rendered inside the client board, so it must stay hook-free. */
-export default function IssueCard({ issue, projectKey, dragging }: { issue: IssueRow; projectKey: string; dragging?: boolean }) {
+export default function IssueCard({ issue, projectKey, dragging, sla }: { issue: IssueRow; projectKey: string; dragging?: boolean; sla?: SlaStatus }) {
   const closed = issue.status === "DONE" || issue.status === "CANCELED";
   const overdue = !closed && isOverdue({ dueDate: issue.dueDate, closedAt: null });
   return (
@@ -35,6 +37,7 @@ export default function IssueCard({ issue, projectKey, dragging }: { issue: Issu
       )}
       <div className="mt-2.5 flex items-center gap-2 text-[11px] text-faint">
         <PriorityIcon priority={issue.priority as Priority} />
+        {sla && <SlaBadge sla={sla} />}
         {issue.dueDate && (
           <span className={`inline-flex items-center gap-1 ${overdue ? "font-medium text-danger" : ""}`}>
             <CalendarClock className="h-3 w-3" />

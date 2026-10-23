@@ -11,6 +11,7 @@ import bcrypt from "bcryptjs";
 import pg from "pg";
 import { PrismaClient, type IssuePriority, type IssueStatus, type IssueType } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { DEFAULT_TARGETS, evaluateSla, targetsFromRows } from "../lib/sla";
 
 const prisma = new PrismaClient({ adapter: new PrismaPg(new pg.Pool({ connectionString: process.env.DATABASE_URL })) });
 
@@ -91,6 +92,13 @@ async function main() {
     const project = await prisma.project.create({
       data: {
         key, name, color, description,
+        // Soft WIP limit low enough that the demo board shows a full column.
+        wipLimits: key === "WEB" ? { IN_PROGRESS: 2, IN_REVIEW: 3 } : { IN_PROGRESS: 4 },
+        slaTargets: {
+          create: (Object.keys(DEFAULT_TARGETS) as IssuePriority[])
+            .filter((p) => DEFAULT_TARGETS[p].resolve)
+            .map((priority) => ({ priority, respondMinutes: DEFAULT_TARGETS[priority].respond, resolveMinutes: DEFAULT_TARGETS[priority].resolve })),
+        },
         members: { create: members.map(([u, role]) => ({ userId: u.id, role })) },
         labels: {
           create: [
@@ -109,7 +117,9 @@ async function main() {
     for (const [title, type] of titles) {
       number++;
       const status = pick(statuses);
-      const createdAt = new Date(now - Math.floor(rand() * 28 * DAY) - DAY);
+      // Open work is recent, so SLA clocks show a realistic mix; finished work spans four weeks.
+      const isOpen = status !== "DONE" && status !== "CANCELED";
+      const createdAt = new Date(isOpen ? now - Math.floor((0.1 + rand() * 2.4) * DAY) : now - Math.floor(rand() * 28 * DAY) - DAY);
       const closedAt = status === "DONE" || status === "CANCELED" ? new Date(Math.min(now, createdAt.getTime() + Math.floor((0.2 + rand() * 4) * DAY))) : null;
       const reporter = pick(assignable);
       const assignee = rand() < 0.8 ? pick(assignable) : null;
@@ -128,7 +138,8 @@ async function main() {
           reporterId: reporter.id,
           assigneeId: assignee?.id ?? null,
           dueDate,
-          estimate: rand() < 0.5 ? pick([1, 2, 3, 5, 8]) : null,
+          estimate: rand() < 0.75 ? pick([1, 2, 3, 5, 8]) : null,
+          firstResponseAt: (status === "BACKLOG" || status === "TODO") && rand() < 0.5 ? null : new Date(Math.min(now, createdAt.getTime() + Math.floor(rand() * 3 * 3_600_000))),
           createdAt,
           closedAt,
           labels: { connect: [pick(project.labels), ...(rand() < 0.3 ? [pick(project.labels)] : [])].map((l) => ({ id: l.id })) },
@@ -204,7 +215,55 @@ async function main() {
       });
     }
 
+    // Ten weeks of finished work so the velocity chart has history.
+    const CHORES = ["Tidy error messages", "Upgrade dependencies", "Improve test coverage", "Refactor data layer", "Fix flaky test", "Polish empty states", "Add audit logging", "Speed up slow query", "Update API docs", "Clean up feature flags"];
+    for (let week = 1; week <= 10; week++) {
+      const perWeek = 2 + Math.floor(rand() * 3);
+      for (let k = 0; k < perWeek; k++) {
+        number++;
+        const closedAt = new Date(now - week * 7 * DAY + Math.floor(rand() * 5) * DAY);
+        const createdAt = new Date(closedAt.getTime() - Math.floor((0.5 + rand() * 4) * DAY));
+        await prisma.issue.create({
+          data: {
+            projectId: project.id, number, title: `${pick(CHORES)} (${key.toLowerCase()}-${week}${k})`,
+            type: "TASK", status: "DONE", priority: pick(priorities), estimate: rand() < 0.85 ? pick([1, 2, 3, 5, 8]) : null,
+            reporterId: pick(assignable).id, assigneeId: pick(assignable).id, position: number * 1024,
+            createdAt, closedAt, firstResponseAt: new Date(createdAt.getTime() + 2 * 3_600_000),
+            activities: { create: [{ kind: "CREATED", createdAt }] },
+          },
+        });
+      }
+    }
+
+    // Fresh urgent and high issues so the SLA views have something at risk and breached.
+    for (const [title, priority, hoursAgo] of [
+      [`${name}: login requests timing out for some users`, "URGENT", 7],
+      [`${name}: export job stuck in queue`, "HIGH", 30],
+    ] as const) {
+      number++;
+      const createdAt = new Date(now - hoursAgo * 3_600_000);
+      await prisma.issue.create({
+        data: {
+          projectId: project.id, number, title, type: "INCIDENT", status: "TODO", priority,
+          reporterId: pick(assignable).id, assigneeId: ada.id, position: -number * 1024, createdAt,
+          activities: { create: [{ kind: "CREATED", createdAt }] },
+        },
+      });
+    }
+
     await prisma.project.update({ where: { id: project.id }, data: { issueCounter: number } });
+  }
+
+  // Mark SLA state as already known, so the first sweep only alerts on new changes
+  // (mirrors baselineSlaAlerts in lib/sla-sweep.ts, which is server-only).
+  for (const project of await prisma.project.findMany({ where: { key: { in: DEMO_KEYS } }, include: { slaTargets: true } })) {
+    const targets = targetsFromRows(project.slaTargets);
+    const open = await prisma.issue.findMany({ where: { projectId: project.id, closedAt: null } });
+    for (const issue of open) {
+      const { live: worst } = evaluateSla(issue, targets);
+      const level = worst === "breached" ? 2 : worst === "at_risk" ? 1 : 0;
+      if (level) await prisma.issue.update({ where: { id: issue.id }, data: { slaAlert: level } });
+    }
   }
 
   // A few unread notifications so the inbox has something in it.

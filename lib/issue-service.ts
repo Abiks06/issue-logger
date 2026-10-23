@@ -3,6 +3,7 @@ import type { NotificationType, Prisma } from "@prisma/client";
 import { ActionError } from "@/lib/access";
 import { CLOSED_STATUSES, type Status } from "@/lib/constants";
 import { POSITION_STEP } from "@/lib/ordering";
+import { isResponse } from "@/lib/sla";
 
 // Database operations shared by server actions and the ingestion API.
 
@@ -82,6 +83,8 @@ export async function insertIssue(
       number: issueCounter,
       position: await topPosition(tx, projectId, status),
       closedAt: CLOSED_STATUSES.includes(status) ? new Date() : null,
+      // Created straight into active work counts as already acknowledged.
+      firstResponseAt: rest.firstResponseAt ?? (isResponse({ fromStatus: "TODO", toStatus: status }) ? new Date() : null),
       labels: labelIds?.length ? { connect: labelIds.map((id) => ({ id })) } : undefined,
     },
   });

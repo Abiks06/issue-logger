@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { requireProject } from "@/lib/access";
 import { can } from "@/lib/permissions";
-import { issueRowSelect } from "@/lib/queries";
+import { issueRowSelect, projectSlaTargets } from "@/lib/queries";
 import { daysAgo } from "@/lib/analytics";
 import type { Status } from "@/lib/constants";
 import Board from "@/components/board/Board";
@@ -39,6 +39,8 @@ export default async function BoardPage({ params }: PageProps<"/projects/[key]/b
       meId={user.id}
       canEdit={can(role, "issue:write")}
       columnNotes={{ DONE: `Closed in the last ${DONE_WINDOW_DAYS} days` }}
+      wipLimits={(project.wipLimits ?? {}) as Partial<Record<Status, number>>}
+      slaTargets={await projectSlaTargets(project.id)}
     />
     </>
   );

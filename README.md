@@ -27,6 +27,10 @@ v1 was a single-user list of issues. v2 rebuilds it around teams and automation:
 - **Board.** Columns per status with drag-and-drop ordering (fractional positions, so a move rewrites one row). Moves are optimistic and roll back if the server refuses. Quick-add issues straight into a column, filter cards by text or "assigned to me", and see sub-issue progress on each card.
 - **List.** Search (title, body, `#number` or `KEY-123`), filter by status, priority, type, assignee and label, sort five ways, paginate. All state lives in the URL, so filtered views can be bookmarked. Save any filter combination as a named view. Select rows to change status, priority or assignee in bulk, or delete. Keyboard: `j`/`k` to move, `x` to select, Enter to open.
 - **Issue page.** Markdown editor with a formatting toolbar and shortcuts, templates per issue type, inline property editing, sub-issues with a progress bar, a parent picker that refuses cycles, editable comments with @mention autocomplete, a copy-branch-name button, and a timeline of every change.
+- **SLA tracking.** Response and resolution targets per priority (sensible defaults on every new project, editable under Settings → Workflow). Each issue shows both clocks; cards and rows flag issues at risk (last 25% of the window) or breached; the list can filter by SLA state; Insights reports hit rates per priority. Response stops when work starts or someone other than the reporter comments; resolution stops at Done. Clocks run on wall-clock time.
+- **SLA alerts.** Assignees (or project admins, for unassigned work) get an Inbox alert when an issue goes at risk and again when it breaches. Changing targets re-baselines silently, so turning SLAs on doesn't alert on the whole backlog.
+- **Velocity.** Estimate points completed per week over the last 12 weeks, a 4-week rolling average, and a forecast of how long the open estimated backlog will take. No sprints required.
+- **WIP limits.** Optional per-column limits on the board. A column at its limit turns amber, over it turns red, and moving work into a full column shows a warning (moves aren't blocked).
 - **Inbox.** Notifications for assignments, mentions, comments on issues you reported or own, status changes and regressions. Opening an issue clears its notifications.
 - **Insights.** Created-vs-resolved chart for the last 30 days, net flow, median time to resolve, overdue count, breakdowns by status, priority and assignee, and the most frequent reported errors.
 - **My work.** Everything assigned to you across projects, grouped by status, with overdue and due-this-week counts and recent activity.
@@ -127,6 +131,10 @@ tests/            Unit tests for the pure logic in lib/
 | `npm run typecheck` / `lint` | TypeScript and ESLint |
 | `npm run db:migrate` / `db:deploy` | Prisma migrations |
 | `npm run db:seed` | Replace the demo users and projects |
+
+### SLA alerts in production
+
+Alerts are swept at most once a minute after page loads. For alerts while nobody is using the app, set `CRON_SECRET` and call `GET /api/cron/sla` with `Authorization: Bearer <CRON_SECRET>` from any scheduler (Vercel Cron, GitHub Actions, cron + curl) every few minutes.
 
 ## Upgrading from v1
 

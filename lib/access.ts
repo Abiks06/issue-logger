@@ -9,21 +9,26 @@ import type { Role } from "@/lib/constants";
 // Request-scoped access checks. `cache` dedupes them across the layout,
 // page and components that render in the same request.
 
-export const currentUser = cache(async () => {
+const sessionUser = cache(async () => {
   const session = await auth();
   const id = session?.user?.id;
-  if (!id) return null;
-  return prisma.user.findUnique({
+  if (!id) return { hasSession: false, user: null };
+  const user = await prisma.user.findUnique({
     where: { id },
     select: { id: true, name: true, email: true },
   });
+  return { hasSession: true, user };
 });
+
+export const currentUser = cache(async () => (await sessionUser()).user);
 
 /** Signed-in user, or a redirect to the login page (for pages). */
 export async function requireUser() {
-  const user = await currentUser();
-  if (!user) redirect("/auth/login");
-  return user;
+  const { hasSession, user } = await sessionUser();
+  if (user) return user;
+  // A valid cookie for an account that no longer exists: the proxy would send
+  // /auth/login straight back here, so clear the cookie instead of looping.
+  redirect(hasSession ? "/api/session/reset" : "/auth/login");
 }
 
 export const projectAccess = cache(async (key: string) => {

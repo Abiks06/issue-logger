@@ -5,7 +5,8 @@ import { ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { projectAccess, requireProject } from "@/lib/access";
 import { can } from "@/lib/permissions";
-import { projectLabels, projectMembers } from "@/lib/queries";
+import { projectLabels, projectMembers, projectSlaTargets } from "@/lib/queries";
+import { evaluateSla } from "@/lib/sla";
 import { handleFor, issueKey } from "@/lib/constants";
 import SubIssues from "@/components/issues/SubIssues";
 import AutoRefresh from "@/components/AutoRefresh";
@@ -54,7 +55,7 @@ export default async function IssuePage({ params }: PageProps<"/projects/[key]/i
   });
   if (!issue) notFound();
 
-  const [members, labels] = await Promise.all([projectMembers(project.id), projectLabels(project.id)]);
+  const [members, labels, slaTargets] = await Promise.all([projectMembers(project.id), projectLabels(project.id), projectSlaTargets(project.id)]);
   const canEdit = can(role, "issue:write");
 
   // Opening an issue clears its notifications for this user.
@@ -170,6 +171,7 @@ export default async function IssuePage({ params }: PageProps<"/projects/[key]/i
         meId={user.id}
         canEdit={canEdit}
         canDelete={can(role, "issue:delete") || (canEdit && issue.reporterId === user.id)}
+        sla={evaluateSla(issue, slaTargets)}
       />
     </div>
   );

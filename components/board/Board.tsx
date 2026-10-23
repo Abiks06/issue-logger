@@ -4,10 +4,11 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
-import { Plus, Search, UserRound } from "lucide-react";
+import { AlertTriangle, Plus, Search, UserRound } from "lucide-react";
 import { createIssue, moveIssue } from "@/actions/issues";
 import { STATUS_META, type Status } from "@/lib/constants";
 import { positionBetween } from "@/lib/ordering";
+import { evaluateSla, type SlaTargets } from "@/lib/sla";
 import type { IssueRow } from "@/lib/queries";
 import { StatusIcon } from "@/components/ui/icons";
 import IssueCard from "@/components/issues/IssueCard";
@@ -21,6 +22,9 @@ type Props = {
   canEdit: boolean;
   /** Extra text under a column (e.g. "showing last 30 days"). */
   columnNotes?: Partial<Record<Status, string>>;
+  /** Soft work-in-progress limits per column. */
+  wipLimits?: Partial<Record<Status, number>>;
+  slaTargets?: SlaTargets;
 };
 
 type Drop = { status: Status; index: number };
@@ -33,7 +37,7 @@ function sortColumn(list: IssueRow[]) {
  * Kanban board with native HTML5 drag and drop. Moves apply optimistically
  * and roll back if the server rejects them. Viewers get a read-only board.
  */
-export default function Board({ projectId, projectKey, columns, issues: initial, meId, canEdit, columnNotes = {} }: Props) {
+export default function Board({ projectId, projectKey, columns, issues: initial, meId, canEdit, columnNotes = {}, wipLimits = {}, slaTargets = {} }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [issues, setIssues] = useState(initial);
@@ -98,6 +102,13 @@ export default function Board({ projectId, projectKey, columns, issues: initial,
     const after = column[target.index] ?? null;
     const position = positionBetween(before?.position, after?.position);
 
+    // WIP limits are soft: the move goes through, with a nudge. Counts ignore the board filter.
+    const limit = wipLimits[status];
+    const columnCount = issues.filter((i) => i.status === status && i.id !== id).length + 1;
+    if (moving.status !== status && limit && columnCount > limit) {
+      toast(`${STATUS_META[status].label} is over its WIP limit (${columnCount}/${limit}). Finish something before starting more.`, { icon: "⚠️" });
+    }
+
     const snapshot = issues;
     setIssues((list) => list.map((i) => (i.id === id ? { ...i, status, position } : i)));
 
@@ -140,12 +151,15 @@ export default function Board({ projectId, projectKey, columns, issues: initial,
         {columns.map((status) => {
           const list = byColumn[status];
           const isTarget = drop?.status === status;
+          const limit = wipLimits[status];
+          const total = issues.filter((i) => i.status === status).length;
+          const wip = !limit ? "none" : total > limit ? "over" : total === limit ? "full" : "ok";
           return (
             <section
               key={status}
               aria-label={STATUS_META[status].label}
               className={`flex w-72 shrink-0 flex-col rounded-lg border bg-surface-2/60 transition-colors ${
-                isTarget ? "border-accent/60 bg-accent-soft" : "border-transparent"
+                isTarget ? "border-accent/60 bg-accent-soft" : wip === "over" ? "border-danger/40 bg-danger-soft" : "border-transparent"
               }`}
               onDragOver={(e) => {
                 if (!dragId) return;
@@ -165,7 +179,20 @@ export default function Board({ projectId, projectKey, columns, issues: initial,
               <header className="flex items-center gap-2 px-3 pb-2 pt-3">
                 <StatusIcon status={status} />
                 <h2 className="text-[13px] font-semibold">{STATUS_META[status].label}</h2>
-                <span className="text-xs text-faint">{list.length}</span>
+                {limit ? (
+                  <span
+                    className={`inline-flex items-center gap-1 rounded px-1 text-xs font-medium tabular-nums ${
+                      wip === "over" ? "bg-danger text-white" : wip === "full" ? "text-amber-600 dark:text-amber-400" : "text-faint"
+                    }`}
+                    title={`WIP limit ${limit}${wip === "over" ? ": over the limit" : wip === "full" ? ": at the limit" : ""}`}
+                  >
+                    {wip === "over" && <AlertTriangle className="h-3 w-3" aria-hidden />}
+                    {total}/{limit}
+                    <span className="sr-only">{wip === "over" ? "over WIP limit" : wip === "full" ? "at WIP limit" : "WIP limit"}</span>
+                  </span>
+                ) : (
+                  <span className="text-xs text-faint">{list.length}</span>
+                )}
                 {canEdit && (
                   <button
                     className="btn-icon ml-auto h-6 w-6"
@@ -205,7 +232,7 @@ export default function Board({ projectId, projectKey, columns, issues: initial,
                       }}
                       className={canEdit ? "cursor-grab active:cursor-grabbing" : ""}
                     >
-                      <IssueCard issue={issue} projectKey={projectKey} dragging={dragId === issue.id} />
+                      <IssueCard issue={issue} projectKey={projectKey} dragging={dragId === issue.id} sla={evaluateSla(issue, slaTargets)} />
                     </div>
                   </div>
                 ))}

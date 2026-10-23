@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AlertOctagon, AtSign, CircleDot, Inbox, MessageSquare, UserPlus } from "lucide-react";
+import { AlertOctagon, AtSign, CircleDot, Hourglass, Inbox, MessageSquare, TimerOff, UserPlus } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/access";
 import { issueKey, STATUS_META, type Status } from "@/lib/constants";
@@ -17,7 +17,15 @@ const TYPE_UI = {
   MENTIONED: { icon: AtSign, verb: "mentioned you on" },
   STATUS_CHANGED: { icon: CircleDot, verb: "changed the status of" },
   REGRESSED: { icon: AlertOctagon, verb: "reopened" },
+  SLA_AT_RISK: { icon: Hourglass, verb: "flagged an SLA at risk on" },
+  SLA_BREACHED: { icon: TimerOff, verb: "flagged an SLA breach on" },
 } as const;
+
+const SYSTEM_ACTOR: Partial<Record<keyof typeof TYPE_UI, string>> = {
+  REGRESSED: "Ingestion API",
+  SLA_AT_RISK: "SLA monitor",
+  SLA_BREACHED: "SLA monitor",
+};
 
 export default async function InboxPage() {
   const user = await requireUser();
@@ -57,12 +65,12 @@ export default async function InboxPage() {
                     href={`/projects/${n.issue.project.key}/issues/${n.issue.number}`}
                     className={`flex items-start gap-3 px-4 py-3 hover:bg-surface-2/60 ${n.readAt ? "" : "bg-accent-soft/50"}`}
                   >
-                    <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${n.type === "REGRESSED" ? "bg-danger-soft text-danger" : "bg-surface-2 text-muted"}`}>
+                    <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${n.type === "REGRESSED" || n.type === "SLA_BREACHED" ? "bg-danger-soft text-danger" : n.type === "SLA_AT_RISK" ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" : "bg-surface-2 text-muted"}`}>
                       <Icon className="h-3.5 w-3.5" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] text-muted">
-                        <span className="font-medium text-fg">{n.actor?.name ?? (n.type === "REGRESSED" ? "Ingestion API" : "Someone")}</span> {verb}{" "}
+                        <span className="font-medium text-fg">{n.actor?.name ?? SYSTEM_ACTOR[n.type] ?? "Someone"}</span> {verb}{" "}
                         <span className="font-mono text-xs">{key}</span>
                         {n.type === "STATUS_CHANGED" && <> → {STATUS_META[n.issue.status as Status].label}</>}
                       </p>

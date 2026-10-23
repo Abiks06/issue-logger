@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { slaWhere, type SlaTargets } from "@/lib/sla";
 import { PRIORITIES, STATUSES, TYPES, type IssueKind, type Priority, type Status } from "@/lib/constants";
 
 // URL ⇄ filter state ⇄ Prisma `where`. The list view keeps all of its state
@@ -17,9 +18,14 @@ export type IssueFilters = {
   /** "me", "none", or a user id. */
   assignee: string | null;
   label: string | null;
+  /** Open issues whose SLA is at risk or already breached. */
+  sla: SlaFilter | null;
   sort: Sort;
   page: number;
 };
+
+export const SLA_FILTERS = ["at_risk", "breached"] as const;
+export type SlaFilter = (typeof SLA_FILTERS)[number];
 
 type Params = Record<string, string | string[] | undefined>;
 
@@ -47,6 +53,7 @@ export function parseFilters(params: Params): IssueFilters {
     assignee: first(params.assignee) || null,
     label: first(params.label) || null,
     sort: (SORTS as readonly string[]).includes(sort ?? "") ? (sort as Sort) : "updated",
+    sla: (SLA_FILTERS as readonly string[]).includes(first(params.sla) ?? "") ? (first(params.sla) as SlaFilter) : null,
     page: Number.isFinite(page) && page > 0 ? Math.min(page, 10_000) : 1,
   };
 }
@@ -62,13 +69,14 @@ export function filtersToQuery(filters: IssueFilters, patch: Partial<IssueFilter
   if (next.assignee) sp.set("assignee", next.assignee);
   if (next.label) sp.set("label", next.label);
   if (next.sort !== "updated") sp.set("sort", next.sort);
+  if (next.sla) sp.set("sla", next.sla);
   if (next.page > 1) sp.set("page", String(next.page));
   const s = sp.toString();
   return s ? `?${s}` : "";
 }
 
 export function hasActiveFilters(f: IssueFilters) {
-  return Boolean(f.q || f.status.length || f.priority.length || f.type.length || f.assignee || f.label);
+  return Boolean(f.q || f.status.length || f.priority.length || f.type.length || f.assignee || f.label || f.sla);
 }
 
 /** Matches "API-42" style keys so a search can jump straight to an issue. */
@@ -77,8 +85,16 @@ export function parseIssueKey(q: string) {
   return m ? { key: m[1].toUpperCase(), number: Number(m[2]) } : null;
 }
 
-export function buildWhere(projectId: string, f: IssueFilters, currentUserId: string): Prisma.IssueWhereInput {
+export function buildWhere(
+  projectId: string,
+  f: IssueFilters,
+  currentUserId: string,
+  slaTargets: SlaTargets = {},
+  now = new Date(),
+): Prisma.IssueWhereInput {
   const where: Prisma.IssueWhereInput = { projectId };
+  // The SLA clause has its own OR, so it's combined with AND rather than merged.
+  if (f.sla) where.AND = [slaWhere(slaTargets, f.sla, now)];
   if (f.status.length) where.status = { in: f.status };
   if (f.priority.length) where.priority = { in: f.priority };
   if (f.type.length) where.type = { in: f.type };

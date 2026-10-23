@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ArrowUpDown, Search, Tag, UserRound, X } from "lucide-react";
+import { ArrowUpDown, Hourglass, Search, Tag, UserRound, X } from "lucide-react";
 import { filtersToQuery, hasActiveFilters, type IssueFilters, type Sort } from "@/lib/issue-filters";
 import Picker from "@/components/ui/Picker";
 import { assigneeOptions, labelOptions, priorityOptions, statusOptions, typeOptions, type LabelLite, type MemberLite } from "@/components/ui/options";
@@ -124,6 +124,20 @@ export default function FilterBar({
           {labels.find((l) => l.id === filters.label)?.name ?? "Label"}
         </Picker>
       )}
+
+      <Picker
+        label="SLA"
+        options={[
+          { value: "at_risk", label: "SLA at risk" },
+          { value: "breached", label: "SLA breached" },
+        ]}
+        value={filters.sla}
+        onChange={(v) => apply({ sla: v === filters.sla ? null : (v as IssueFilters["sla"]) })}
+        triggerClassName={chip(Boolean(filters.sla))}
+      >
+        <Hourglass className="h-3.5 w-3.5" />
+        {filters.sla === "at_risk" ? "SLA at risk" : filters.sla === "breached" ? "SLA breached" : "SLA"}
+      </Picker>
 
       <Picker
         label="Sort"

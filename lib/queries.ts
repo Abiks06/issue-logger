@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { targetsFromRows } from "@/lib/sla";
 
 // Read helpers shared by several pages, deduped per request.
 
@@ -13,6 +14,10 @@ export const projectMembers = cache(async (projectId: string) => {
   });
   return rows;
 });
+
+export const projectSlaTargets = cache(async (projectId: string) =>
+  targetsFromRows(await prisma.slaTarget.findMany({ where: { projectId } })),
+);
 
 export const projectLabels = cache((projectId: string) =>
   prisma.label.findMany({ where: { projectId }, orderBy: { name: "asc" }, select: { id: true, name: true, color: true } }),
@@ -36,6 +41,8 @@ export const issueRowSelect = {
   labels: { select: { id: true, name: true, color: true }, orderBy: { name: "asc" } },
   _count: { select: { comments: true } },
   children: { select: { status: true } },
+  firstResponseAt: true,
+  closedAt: true,
 } satisfies Prisma.IssueSelect;
 
 export type IssueRow = Prisma.IssueGetPayload<{ select: typeof issueRowSelect }>;

@@ -12,6 +12,7 @@ import { assertProjectRefs, closedAtFor, insertIssue, notify, topPosition } from
 import { commentSchema, issuePatchSchema, issueSchema } from "@/lib/validation";
 import { PRIORITIES, STATUSES, issueKey, type Role, type Status } from "@/lib/constants";
 import { parseIssueKey } from "@/lib/issue-filters";
+import { isResponse } from "@/lib/sla";
 
 function refresh(projectKey: string, number?: number) {
   revalidatePath(`/projects/${projectKey}`, "layout");
@@ -99,6 +100,7 @@ async function applyPatch(
 
     const statusChanged = patch.status !== undefined && patch.status !== issue.status;
     let position = extra.position;
+    const nextClosedAt = statusChanged ? closedAtFor(issue.status as Status, patch.status!) : undefined;
     if (statusChanged && position === undefined) position = await topPosition(tx, issue.projectId, patch.status!);
 
     await tx.issue.update({
@@ -114,7 +116,11 @@ async function applyPatch(
         dueDate: patch.dueDate,
         estimate: patch.estimate,
         position,
-        closedAt: statusChanged ? closedAtFor(issue.status as Status, patch.status!) : undefined,
+        closedAt: nextClosedAt,
+        // SLA bookkeeping: the first move out of the queue is the response, and a
+        // new priority or a reopen re-arms alerts against the new situation.
+        firstResponseAt: !issue.firstResponseAt && isResponse({ fromStatus: issue.status, toStatus: patch.status }) ? new Date() : undefined,
+        slaAlert: (patch.priority !== undefined && patch.priority !== issue.priority) || nextClosedAt === null ? 0 : undefined,
         labels: patch.labelIds ? { set: patch.labelIds.map((id) => ({ id })) } : undefined,
       },
     });
@@ -262,6 +268,9 @@ export async function addComment(issueId: string, input: unknown): Promise<Actio
 
     await prisma.$transaction(async (tx) => {
       await tx.comment.create({ data: { issueId, authorId: user.id, body } });
+      if (!issue.firstResponseAt && issue.reporterId !== user.id) {
+        await tx.issue.update({ where: { id: issueId }, data: { firstResponseAt: new Date() } });
+      }
       await tx.activity.create({ data: { issueId, actorId: user.id, kind: "COMMENTED" } });
       await notify(tx, { userIds: mentioned, actorId: user.id, issueId, type: "MENTIONED" });
       await notify(tx, {

@@ -61,6 +61,8 @@ enum NotificationType {
   MENTIONED
   STATUS_CHANGED
   REGRESSED
+  SLA_AT_RISK
+  SLA_BREACHED
 }
 
 enum TokenType {
@@ -115,15 +117,18 @@ model Project {
   description  String   @default("") @db.Text
   color        String   @default("#6366f1") @db.VarChar(7)
   issueCounter Int      @default(0)
+  /// Soft work-in-progress limits per board column, e.g. {"IN_PROGRESS": 5}.
+  wipLimits    Json     @default("{}")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  members ProjectMember[]
-  issues  Issue[]
-  labels  Label[]
-  apiKeys ApiKey[]
-  invites ProjectInvite[]
-  views   SavedView[]
+  members    ProjectMember[]
+  issues     Issue[]
+  labels     Label[]
+  apiKeys    ApiKey[]
+  invites    ProjectInvite[]
+  views      SavedView[]
+  slaTargets SlaTarget[]
 }
 
 model ProjectMember {
@@ -154,6 +159,19 @@ model ProjectInvite {
 
   @@unique([projectId, email])
   @@index([email])
+}
+
+/// Response and resolution targets for one priority, in minutes (null = no target).
+model SlaTarget {
+  id             String        @id @default(cuid())
+  projectId      String
+  priority       IssuePriority
+  respondMinutes Int?
+  resolveMinutes Int?
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, priority])
 }
 
 /// A named list-view filter, private to its owner.
@@ -204,30 +222,34 @@ model ApiKey {
 // ─── Issues ─────────────────────────────────────────────────────────
 
 model Issue {
-  id          String        @id @default(cuid())
-  projectId   String
-  number      Int
-  title       String        @db.VarChar(255)
-  description String        @default("") @db.Text
-  status      IssueStatus   @default(TODO)
-  priority    IssuePriority @default(NONE)
-  type        IssueType     @default(TASK)
+  id              String        @id @default(cuid())
+  projectId       String
+  number          Int
+  title           String        @db.VarChar(255)
+  description     String        @default("") @db.Text
+  status          IssueStatus   @default(TODO)
+  priority        IssuePriority @default(NONE)
+  type            IssueType     @default(TASK)
   /// Fractional sort key inside a board column; lower sorts first.
-  position    Float         @default(0)
-  assigneeId  String?
-  reporterId  String?
-  dueDate     DateTime?
-  estimate    Int?
-  source      IssueSource   @default(MANUAL)
+  position        Float         @default(0)
+  assigneeId      String?
+  reporterId      String?
+  dueDate         DateTime?
+  estimate        Int?
+  source          IssueSource   @default(MANUAL)
   /// Dedupe key for API-reported issues: repeat events bump `occurrences`.
-  fingerprint String?       @db.VarChar(64)
-  occurrences Int           @default(1)
-  lastSeenAt  DateTime?
-  environment String?       @db.VarChar(40)
-  closedAt    DateTime?
-  parentId    String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  fingerprint     String?       @db.VarChar(64)
+  occurrences     Int           @default(1)
+  lastSeenAt      DateTime?
+  environment     String?       @db.VarChar(40)
+  closedAt        DateTime?
+  parentId        String?
+  /// First acknowledgement by the team (work started, or a comment from someone other than the reporter).
+  firstResponseAt DateTime?
+  /// Highest SLA alert already sent: 0 none, 1 at risk, 2 breached.
+  slaAlert        Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   parent        Issue?         @relation("SubIssues", fields: [parentId], references: [id], onDelete: SetNull)

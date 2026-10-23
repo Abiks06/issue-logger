@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { projectAccess } from "@/lib/access";
 import { buildOrderBy, buildWhere, parseFilters } from "@/lib/issue-filters";
 import { toCsv } from "@/lib/csv";
+import { projectSlaTargets } from "@/lib/queries";
 import { issueKey } from "@/lib/constants";
 
 /** CSV export of a project's issues, honouring the list view's filters. */
@@ -13,7 +14,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/projects/[ke
   const params = Object.fromEntries(new URL(request.url).searchParams);
   const filters = parseFilters(params);
   const issues = await prisma.issue.findMany({
-    where: buildWhere(access.project.id, filters, access.user.id),
+    where: buildWhere(access.project.id, filters, access.user.id, await projectSlaTargets(access.project.id)),
     orderBy: buildOrderBy(filters.sort),
     take: 10_000,
     include: {

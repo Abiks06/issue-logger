@@ -10,6 +10,8 @@ import { PRIORITY_META, STATUS_META, TYPE_META, type IssueKind, type Priority, t
 import { isOverdue } from "@/lib/analytics";
 import Picker from "@/components/ui/Picker";
 import ParentPicker from "@/components/issues/ParentPicker";
+import { SlaClockRow } from "@/components/issues/SlaBadge";
+import type { SlaStatus } from "@/lib/sla";
 import ConfirmButton from "@/components/ui/ConfirmButton";
 import { Avatar, LabelChip, TimeAgo } from "@/components/ui/bits";
 import { PriorityIcon, StatusIcon, TypeIcon } from "@/components/ui/icons";
@@ -49,11 +51,12 @@ type Props = {
   meId: string;
   canEdit: boolean;
   canDelete: boolean;
+  sla: SlaStatus;
 };
 
 const trigger = "btn-ghost h-8 w-full justify-start px-2 text-[13px] text-fg disabled:opacity-100";
 
-export default function IssueProperties({ projectId, projectKey, issue: initial, members, labels, meId, canEdit, canDelete }: Props) {
+export default function IssueProperties({ projectId, projectKey, issue: initial, members, labels, meId, canEdit, canDelete, sla }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [issue, setIssue] = useState(initial);
@@ -161,6 +164,14 @@ export default function IssueProperties({ projectId, projectKey, issue: initial,
             aria-label="Estimate in points"
           />
         </Row>
+
+        {(sla.respond || sla.resolve) && (
+          <div className="mt-2 flex flex-col gap-1.5 border-t border-line px-2 pt-3" aria-label="Service level">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-faint">SLA</p>
+            <SlaClockRow label="Response" clock={sla.respond} />
+            <SlaClockRow label="Resolution" clock={sla.resolve} />
+          </div>
+        )}
 
         <dl className="mt-2 flex flex-col gap-1.5 border-t border-line px-2 pt-3 text-xs">
           <Meta label="Reporter">{issue.reporter ?? (issue.source === "API" ? "API" : "—")}</Meta>

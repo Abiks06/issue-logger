@@ -7,7 +7,9 @@ import { ActionError, authorizeProject, currentUser } from "@/lib/access";
 import { run, type ActionResult } from "@/lib/action";
 import { canChangeRole, canRemoveMember } from "@/lib/permissions";
 import { generateApiKey } from "@/lib/tokens";
-import { ROLES, type Role } from "@/lib/constants";
+import { PRIORITIES, ROLES, STATUSES, type Role } from "@/lib/constants";
+import { DEFAULT_TARGETS } from "@/lib/sla";
+import { baselineSlaAlerts } from "@/lib/sla-sweep";
 import { apiKeySchema, inviteSchema, labelSchema, projectSchema, projectSettingsSchema } from "@/lib/validation";
 import { z } from "zod";
 import { actionEmail, appUrl, mailConfigured, sendMail } from "@/lib/mail";
@@ -37,6 +39,13 @@ export async function createProject(input: unknown): Promise<ActionResult<{ key:
           ...data,
           members: { create: { userId: user.id, role: "OWNER" } },
           labels: { create: DEFAULT_LABELS },
+          slaTargets: {
+            create: PRIORITIES.filter((p) => DEFAULT_TARGETS[p].resolve).map((priority) => ({
+              priority,
+              respondMinutes: DEFAULT_TARGETS[priority].respond,
+              resolveMinutes: DEFAULT_TARGETS[priority].resolve,
+            })),
+          },
         },
       });
       refresh();
@@ -289,6 +298,44 @@ export async function deleteSavedView(viewId: string): Promise<ActionResult> {
     if (!user || !view || view.userId !== user.id) throw new ActionError("View not found.");
     await prisma.savedView.delete({ where: { id: viewId } });
     refresh(view.project.key);
+    return undefined;
+  });
+}
+
+// ─── Workflow: SLA targets and WIP limits ─────────────────────────────
+
+const hours = z.number().min(0.25).max(24 * 90).nullable();
+const workflowSchema = z.object({
+  sla: z.array(z.object({ priority: z.enum(PRIORITIES), respondHours: hours, resolveHours: hours })).max(PRIORITIES.length),
+  wip: z.partialRecord(z.enum(STATUSES), z.number().int().min(1).max(999).nullable()),
+});
+
+export async function updateWorkflow(projectId: string, input: unknown): Promise<ActionResult> {
+  return run(async () => {
+    await authorizeProject(projectId, "project:manage");
+    const data = workflowSchema.parse(input);
+    const wipLimits = Object.fromEntries(Object.entries(data.wip).filter(([, v]) => typeof v === "number"));
+    const toMinutes = (h: number | null) => (h === null ? null : Math.round(h * 60));
+
+    const project = await prisma.$transaction(async (tx) => {
+      for (const row of data.sla) {
+        const respondMinutes = toMinutes(row.respondHours);
+        const resolveMinutes = toMinutes(row.resolveHours);
+        if (respondMinutes === null && resolveMinutes === null) {
+          await tx.slaTarget.deleteMany({ where: { projectId, priority: row.priority } });
+        } else {
+          await tx.slaTarget.upsert({
+            where: { projectId_priority: { projectId, priority: row.priority } },
+            create: { projectId, priority: row.priority, respondMinutes, resolveMinutes },
+            update: { respondMinutes, resolveMinutes },
+          });
+        }
+      }
+      return tx.project.update({ where: { id: projectId }, data: { wipLimits }, select: { key: true } });
+    });
+    // Re-baseline under the new targets so saving doesn't alert on the whole backlog.
+    await baselineSlaAlerts(projectId);
+    refresh(project.key);
     return undefined;
   });
 }

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireProject } from "@/lib/access";
 import { can } from "@/lib/permissions";
 import { PAGE_SIZE, buildOrderBy, buildWhere, filtersToQuery, hasActiveFilters, parseFilters } from "@/lib/issue-filters";
-import { issueRowSelect, projectLabels, projectMembers } from "@/lib/queries";
+import { issueRowSelect, projectLabels, projectMembers, projectSlaTargets } from "@/lib/queries";
 import FilterBar from "@/components/issues/FilterBar";
 import IssueTable from "@/components/issues/IssueTable";
 import SavedViews from "@/components/issues/SavedViews";
@@ -17,7 +17,8 @@ export default async function IssuesPage({ params, searchParams }: PageProps<"/p
   const { key } = await params;
   const { project, role, user } = await requireProject(key);
   const filters = parseFilters(await searchParams);
-  const where = buildWhere(project.id, filters, user.id);
+  const slaTargets = await projectSlaTargets(project.id);
+  const where = buildWhere(project.id, filters, user.id, slaTargets);
 
   const [total, issues, members, labels, views] = await Promise.all([
     prisma.issue.count({ where }),
@@ -77,6 +78,7 @@ export default async function IssuesPage({ params, searchParams }: PageProps<"/p
         canDeleteAny={can(role, "issue:delete")}
         total={total}
         filtered={hasActiveFilters(filters)}
+        slaTargets={slaTargets}
       />
 
       {pages > 1 && (
