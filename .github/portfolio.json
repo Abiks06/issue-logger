@@ -1,3 +1,10 @@
 {
-  "name": "Issue Logger"
+  "name": "Issue Logger",
+  "highlights": [
+    "Team issue tracker in Next.js, Prisma and PostgreSQL: projects with short keys (API-42), Owner/Admin/Member/Viewer roles re-checked on every server action, a drag-and-drop board and a filterable list with bulk edits.",
+    "Error ingestion API: services report crashes with a hashed API key, repeats are grouped by fingerprint, and an error that returns after it was fixed reopens its issue as a regression.",
+    "Signed (HMAC-SHA256) webhooks to Slack, Discord or any endpoint, delivered through a transactional outbox with retries and backoff, plus per-person email notifications.",
+    "SLA clocks with at-risk and breach alerts, velocity forecasts and an insights dashboard; email-verified accounts with session revocation, a ⌘K palette and keyboard shortcuts."
+  ],
+  "keywords": ["Next.js", "TypeScript", "Prisma", "PostgreSQL", "Auth.js", "Vitest"]
 }
