@@ -6,5 +6,15 @@
     "Signed (HMAC-SHA256) webhooks to Slack, Discord or any endpoint, delivered through a transactional outbox with retries and backoff, plus per-person email notifications.",
     "SLA clocks with at-risk and breach alerts, velocity forecasts and an insights dashboard; email-verified accounts with session revocation, a ⌘K palette and keyboard shortcuts."
   ],
-  "keywords": ["Next.js", "TypeScript", "Prisma", "PostgreSQL", "Auth.js", "Vitest"]
+  "keywords": ["Next.js", "TypeScript", "Prisma", "PostgreSQL", "Auth.js", "Vitest"],
+  "screenshot": {
+    "login": {
+      "path": "/auth/login",
+      "email": "#email",
+      "password": "#password",
+      "submit": "button[type=submit]"
+    },
+    "path": "/projects/WEB/board",
+    "delay": 2000
+  }
 }
