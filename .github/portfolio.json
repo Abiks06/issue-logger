@@ -6,7 +6,52 @@
     "Signed (HMAC-SHA256) webhooks to Slack, Discord or any endpoint, delivered through a transactional outbox with retries and backoff, plus per-person email notifications.",
     "SLA clocks with at-risk and breach alerts, velocity forecasts and an insights dashboard; email-verified accounts with session revocation, a ⌘K palette and keyboard shortcuts."
   ],
-  "keywords": ["Next.js", "TypeScript", "Prisma", "PostgreSQL", "Auth.js", "Vitest"],
+  "keywords": [
+    "Next.js",
+    "TypeScript",
+    "Prisma",
+    "PostgreSQL",
+    "Auth.js",
+    "Vitest"
+  ],
+  "tracks": [
+    "fullstack",
+    "backend"
+  ],
+  "metrics": [
+    {
+      "value": "4",
+      "label": "roles (Owner, Admin, Member, Viewer) re-checked on every server action"
+    },
+    {
+      "value": "5",
+      "label": "webhook event types, signed with HMAC-SHA256"
+    }
+  ],
+  "pipeline": [
+    "Service reports an error (hashed API key)",
+    "Group by fingerprint",
+    "New issue, or a regression reopened",
+    "Transactional outbox",
+    "Signed webhooks and email"
+  ],
+  "decisions": [
+    {
+      "choice": "Deliver webhooks through a transactional outbox with retries and backoff",
+      "over": "Calling endpoints inline",
+      "because": "A slow or failing endpoint can't block or lose the change that triggered it."
+    },
+    {
+      "choice": "Store API keys only as SHA-256 hashes, shown once",
+      "over": "Keeping keys readable",
+      "because": "A leaked database doesn't hand out working keys."
+    },
+    {
+      "choice": "Group errors by title (digits ignored) plus the top stack frame",
+      "over": "One issue per event",
+      "because": "\"timeout after 3012ms\" and \"timeout after 2990ms\" land on the same issue."
+    }
+  ],
   "screenshot": {
     "login": {
       "path": "/auth/login",
